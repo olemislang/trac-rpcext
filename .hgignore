@@ -1,0 +1,28 @@
+syntax: glob
+
+# Backup files left behind by the Emacs editor.
+*~
+# Lock files used by the Emacs editor.
+.\#*
+# Temporary files used by the vim editor.
+.*.swp
+# A hidden file created by the Mac OS X Finder.
+.DS_Store
+# Compiled Python scripts
+**/*.pyc
+**/*.pyo
+# Metadata for Python package 
+**/PKG-INFO
+**/*.egg-info
+# Temporary folders
+**/temp
+**/temp/*
+# SVN entries and temp files
+**/.svn/*
+**/*.tmp
+# Build and dist dirs
+**/build/**
+**/dist/**
+# Mindmaps
+**/*.mm
+
