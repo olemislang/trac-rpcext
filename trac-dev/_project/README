@@ -1,0 +1,63 @@
+
+= ${project.summary} =
+
+{# In this is folder you will find stub files that can be used as a template to create new folders to develop new Trac plugins. They are written considering Genshi text template syntax so you can expand them at any time in order to setup a new envronment quickly by just providing the minimal set of meta-data (in `desc.ini`) needed to get you started (see [#Installation Installation] for further details). #} ${project.desc}
+
+== !ToDo ==
+
+Outstanding tasks are :
+
+[[TicketQuery(component=${project.component}&priority=major, format=list, rows=id|summary)]]
+
+== Dependencies ==
+
+This plugin depends on the following components to be installed:
+
+{% for pkgnm, d in deps.iteritems() %}
+  - [${d.home} $pkgnm] {% if d.get('since') %} ,,Since version 
+    ''' ${d.since} ''',, {% end if %}. ${d.get('details', '')}
+{% end for %}
+
+== Installation ==
+
+This plugin has been tested with 
+[http://trac.edgewall.org/ Trac] {% for v in project.get('tracver').split(',') %} [http://trac.edgewall.org/wiki/${'.'.join(v.split('.', 3)[:2])} $v] {% end %}. {% if project.get('demourl') %} You can see it in action [${project.demourl} here] . {% end %}
+
+The first step to make it work is to [wiki:TracPlugins install this plugin] 
+either for a particular environment or otherwise make it available to
+all the environments:
+
+{{{
+$ easy_install /path/to/unpacked/${project.name}-x.y.z.zip
+}}}
+
+,, where ''x.y.z'' is the version of the plugin,,
+
+... or alternately ...
+
+{{{
+$ easy_install ${project.name}
+}}}
+
+In case of having internet connection and access to 
+[http://pypi.python.org/pypi PyPI] or a simlar repository, both these 
+methods '''should''' automatically retrieve the [#Dependencies external 
+dependencies] from there.
+
+== Configuration ==
+
+In order to enable [wiki:/En/Devel/${project.name} ${project.name}] plugin, 
+the only thing to do is to add the following lines to [wiki:TracIni trac.ini].
+
+{{{
+[components]
+${project.topmod}.* = enabled
+}}}
+
+== Bug / feature requests ==
+
+Existing bugs and feature requests for [wiki:/En/Devel/${project.name} ${project.name}] are
+[query:status=new|assigned|reopened&component=${project.component} here].
+If you have any issues, please create a [/newticket?component=${project.component} new ticket].
+
+
