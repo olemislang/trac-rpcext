@@ -79,8 +79,8 @@ setup(
   install_requires = [
       'setuptools>=0.6b1',
       'Trac>=0.11',
-      {% for d in deps.itervalues() %}
-        '${d.topmod}${d.get('verinfo', '')}', {% end %}
+      {% for pkgnm, d in deps.iteritems() %}
+        '${pkgnm}${d.get('verinfo', '')}', {% end %}
   ],
 	package_dir = dict([p, i[0]] for p, i in PKG_INFO.iteritems()),
 	packages = PKG_INFO.keys(),
