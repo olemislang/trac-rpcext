@@ -1,0 +1,13 @@
+
+Outstanding tasks
+-----------------
+
+- Implement Trac Hessian using `HessianPy`.
+
+- Implement Trac SOAP using `soaplib`.
+
+- Implement Trac JabberRPC using `xmppxmlrpc`.
+
+- Implement Trac Burlap using ??? .
+
+- Implement Trac ExtDirect using `extdirect` | `extdirect.django` .

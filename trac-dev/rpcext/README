@@ -1,0 +1,90 @@
+
+= RPC protocols for Trac. =
+
+ This project implements RPC protocols not provided by
+TracXMLRPC plugin. This could be due to conflicting
+dependencies, policies, or maybe other reasons. In the former
+case this plugin MIGHT NOT install by default all the
+dependencies needed by every protocol implementation. In that
+case it will check whether dependencies are available or not
+and will display informative messages if it is not possible
+to process client requests.
+
+== !ToDo ==
+
+Outstanding tasks are :
+
+[[TicketQuery(component=plugin_trac_rpcext&priority=major, format=list, rows=id|summary)]]
+
+== Dependencies ==
+
+This plugin depends on the following components to be installed:
+
+
+  - [http://trac-hacks.org/wiki/XmlRpcPlugin TracXMLRPC]  ,,Since version 
+    ''' 1.0.0 ''',, . This package will be installed by default. If not found
+    then nothing will work.
+
+  - [http://hessianpy.sourceforge.net HessianPy]  ,,Since version 
+    ''' 1.0.0 ''',, . This package will be installed by default and is required
+    in order to access Trac API via
+    [http://hessian.caucho.com/doc/hessian-1.0-spec.xtp Hessian RPC].
+
+  - [http://wiki.github.com/jkp/soaplib-lxml soaplib]  ,,Since version 
+    ''' 1.0.0 ''',, . This package will be installed by default and is required
+    in order to access Trac API via
+    [http://en.wikipedia.org/wiki/SOAP_(protocol) SOAP RPC].
+    Currently there are plans to add support for HTTP transport
+    but [http://xmpp.org/extensions/xep-0072.html XMPP transport]
+    may be available too in a near future.
+
+  - [http://pypi.python.org/pypi/xmppxmlrpc xmppxmlrpc]  ,,Since version 
+    ''' 1.0.0 ''',, . This package cannot be installed by default because the
+    original distribution seems not to be ''easy_installable''.
+    So you need to install it and configure it by hand.
+    It is required in order to access Trac API via
+    [http://xmpp.org/extensions/xep-0009.html Jabber-RPC].
+
+== Installation ==
+
+This plugin has been tested with 
+[http://trac.edgewall.org/ Trac]  [http://trac.edgewall.org/wiki/0.11 0.11.1] .  You can see it in action [https://opensvn.csie.org/traccgi/swlcu here] . 
+
+The first step to make it work is to [wiki:TracPlugins install this plugin] 
+either for a particular environment or otherwise make it available to
+all the environments:
+
+{{{
+$ easy_install /path/to/unpacked/TracRpcProtocols-x.y.z.zip
+}}}
+
+,, where ''x.y.z'' is the version of the plugin,,
+
+... or alternately ...
+
+{{{
+$ easy_install TracRpcProtocols
+}}}
+
+In case of having internet connection and access to 
+[http://pypi.python.org/pypi PyPI] or a simlar repository, both these 
+methods '''should''' automatically retrieve the [#Dependencies external 
+dependencies] from there.
+
+== Configuration ==
+
+In order to enable [wiki:/En/Devel/TracRpcProtocols TracRpcProtocols] plugin, 
+the only thing to do is to add the following lines to [wiki:TracIni trac.ini].
+
+{{{
+[components]
+tracrpcext.* = enabled
+}}}
+
+== Bug / feature requests ==
+
+Existing bugs and feature requests for [wiki:/En/Devel/TracRpcProtocols TracRpcProtocols] are
+[query:status=new|assigned|reopened&component=plugin_trac_rpcext here].
+If you have any issues, please create a [/newticket?component=plugin_trac_rpcext new ticket].
+
+
