@@ -37,7 +37,6 @@ from tracrpc.api import IRPCProtocol, XMLRPCSystem
 from tracrpc.util import StringIO, prepare_docs
 
 from tracrpcext.exc import *
-from tracrpcext.util import RPCRequest
 
 from hessian.hessian import ParseContext, Call, HessianError, Reply, \
                             WriteContext
@@ -55,6 +54,7 @@ class TracHessian(Component):
   """
   implements(IRPCProtocol)
   
+  # IRPCProtocol methods
   def rpc_info(self):
     r"""Protocol description.
     """
@@ -66,56 +66,17 @@ class TracHessian(Component):
     # yield 'rpc', 'application/octet-stream'
     yield 'hessian', 'application/octet-stream'
   
-  def rpc_process(self, req, content_type):
-    r"""Process incoming Hessian RPC request and finalize response.
-    """
-    try :
-      self.log.debug("RPC(hessian) call by '%s'", req.authname)
-      rpcreq = self.parse_rpc_request(req)
-      method_name, args = rpcreq.method, rpcreq.args
-      self.log.debug("RPC(hessian) call by '%s' %s", req.authname, method_name)
-      try :
-        result = (XMLRPCSystem(self.env).get_method(method_name)(req, args))[0]
-        if isinstance(result, GeneratorType):
-            result = list(result)
-      except (RPCError, PermissionError, ResourceNotFound), e:
-        raise
-      except Exception:
-        e, tb = sys.exc_info()[-2:]
-        raise ServiceException(e), None, tb
-      else :
-        self.send_rpc_result(req, rpcreq, result)
-    except (RPCError, PermissionError, ResourceNotFound), e:
-      self.send_rpc_error(req, rpcreq, e)
-    except Exception, e :
-      self.log.exception("RPC(hessian) Error parsing request")
-      self.send_unknown_error(req, rpcreq, e)
-        
-  def parse_rpc_request(self, req):
+  def parse_rpc_request(self, req, content_type):
+    """ Parse Hessian RPC requests"""
     try :
       hctx = ParseContext(req)
-      method, headers, params = Call().read(hctx, hctx.read(1))
+      return dict(zip(['method', 'headers', 'params'], \
+                        Call().read(hctx, hctx.read(1))))
     except HessianError, e :
-      raise ProtocolException(str(e))
-    else :
-      rpcreq = RPCRequest(method, params)
-      rpcreq.headers = headers
-      return rpcreq
+      raise ProtocolException(e)
       
-  def _send_hessian_resp(self, req, rpcreq, result, succeeded):
-    try:
-      sio = StringIO()
-      Reply().write(WriteContext(sio), (rpcreq.headers, succeeded, result))
-      reply = sio.getvalue()
-    except Exception, e:
-      self.log.exception("RPC(hessian) Error sending response")
-      self.send_unknown_error(req, rpcreq, e)
-    else :
-      self.log.debug("RPC(hessian) Return value : %s", reply)
-      req.send(reply, content_type='application/octet-stream')
-      
-  def send_rpc_result(self, req, rpcreq, result):
-    self._send_hessian_resp(req, rpcreq, result, True)
+  def send_rpc_result(self, req, result):
+    self._send_hessian_resp(req, result, True)
   
   ERROR_CODES = dict([c, c.__name__] for c in [ProtocolException,
                                                 NoSuchObjectException,
@@ -128,7 +89,7 @@ class TracHessian(Component):
                       ResourceNotFound: 'NoSuchObjectException'
                       })
   
-  def send_rpc_error(self, req, rpcreq, e):
+  def send_rpc_error(self, req, e):
     r"""Send an Hessian fault message back to the caller. Exception type 
     and message are used for this purpose.
     """
@@ -139,10 +100,14 @@ class TracHessian(Component):
               'message' : str(e)}
     # FIXME: Should all fields be sent back to the caller?
     # result.update(e.__dict__)             
-    self._send_hessian_resp(req, rpcreq, result, False)
+    self._send_hessian_resp(req, result, False)
   
-  def send_unknown_error(self, req, rpcreq, e):
-    stackTrace = format_exc()
-    body = "Can not send response for '%s'\n\n%s" % (rpcreq.method, stackTrace)
-    req.send_error(None, template='', content_type='text/plain',
-                        env=None, data=body)
+  # Internal methods
+  def _send_hessian_resp(self, req, result, succeeded):
+    rpcreq = req.rpc
+    sio = StringIO()
+    Reply().write(WriteContext(sio), (rpcreq['headers'], succeeded, result))
+    reply = sio.getvalue()
+#    self.log.debug("RPC(hessian) Return value : %s", reply)
+    req.send(reply, content_type='application/octet-stream')
+

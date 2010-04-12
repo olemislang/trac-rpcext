@@ -27,6 +27,3 @@ __author__ = 'Olemis Lang'
 
 __metaclass__ = type
 
-class RPCRequest:
-  def __init__(self, method_name, args, **kwds):
-    self.method, self.args = method_name, args

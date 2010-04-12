@@ -25,12 +25,10 @@ Licensed under the GPL License
 """
 __author__ = 'Olemis Lang'
 
-from tracrpc.api import RPCError, MethodNotFound as NoSuchMethodException
+from tracrpc.api import RPCError, MethodNotFound as NoSuchMethodException, \
+                        ProtocolException, ServiceException
 
 __metaclass__ = type
-
-class ProtocolException(RPCError):
-  r"""The request has some sort of syntactic error. """
 
 class NoSuchObjectException(RPCError):
   r"""The requested object (namespace) does not exist. """
@@ -38,9 +36,3 @@ class NoSuchObjectException(RPCError):
 class RequireHeaderException(RPCError):
   r"""A required header was not understood by the server"""
 
-class ServiceException(RPCError):
-  r"""The called method threw an exception."""
-  def __init__(self, e):
-    self._exc = e
-  def __str__(self):
-    return "RPC error. Details %s" % (self._exc,)
