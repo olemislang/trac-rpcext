@@ -11,3 +11,5 @@ Outstanding tasks
 - Implement Trac Burlap using ??? .
 
 - Implement Trac ExtDirect using `extdirect` | `extdirect.django` .
+
+- Bug fix: Fix authentication using HessianPy

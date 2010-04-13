@@ -51,6 +51,17 @@ class TracHessian(Component):
   [http://hessian.caucho.com/doc/hessian-overview.xtp Hessian] is a 
   dynamically-typed binary RPC protocol. This component adds support for 
   [http://hessian.caucho.com/doc/hessian-1.0-spec.xtp version 1.0].
+  
+  The following snippet illustrates how to perform authenticated calls 
+  using `HessianPy`  library.
+  
+  {{{
+  >>> from hessian.client import HessianProxy as HSP
+  >>> hsp = HSP('${req.abs_href.login('hessian')}', {'username' : '$authname', \
+                                                'password' : 'your_password'})
+  >>> getattr(hsp, 'system.getAPIVersion')()
+  [1, 1, 0]
+  }}}
   """
   implements(IRPCProtocol)
   
