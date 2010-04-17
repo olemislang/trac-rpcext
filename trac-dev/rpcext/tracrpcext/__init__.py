@@ -39,6 +39,7 @@ from trac.core import TracError
 TracError.__str__ = lambda self: unicode(self).encode('ascii', 'ignore')
 
 try:
+    from _amf import *
     from _hessian import *
     msg = 'Ok'
 except Exception, exc:

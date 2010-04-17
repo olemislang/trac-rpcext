@@ -2,8 +2,6 @@
 Outstanding tasks
 -----------------
 
-- Implement Trac Hessian using `HessianPy`.
-
 - Implement Trac SOAP using `soaplib`.
 
 - Implement Trac JabberRPC using `xmppxmlrpc`.
@@ -13,3 +11,4 @@ Outstanding tasks
 - Implement Trac ExtDirect using `extdirect` | `extdirect.django` .
 
 - Bug fix: Fix authentication using HessianPy
+

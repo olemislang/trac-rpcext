@@ -44,9 +44,11 @@ import sys
 from traceback import format_exc
 from types import GeneratorType
 
+__all__ = 'HessianProtocol',
+
 __metaclass__ = type
 
-class TracHessian(Component):
+class HessianProtocol(Component):
   r"""
   [http://hessian.caucho.com/doc/hessian-overview.xtp Hessian] is a 
   dynamically-typed binary RPC protocol. This component adds support for 
@@ -60,7 +62,7 @@ class TracHessian(Component):
   >>> hsp = HSP('${req.abs_href.login('hessian')}', {'username' : '$authname', \
                                                 'password' : 'your_password'})
   >>> getattr(hsp, 'system.getAPIVersion')()
-  [1, 1, 0]
+  [${', '.join(rpc.version.split('.'))}]
   }}}
   """
   implements(IRPCProtocol)
