@@ -48,7 +48,8 @@ This plugin depends on the following components to be installed:
 == Installation ==
 
 This plugin has been tested with 
-[http://trac.edgewall.org/ Trac]  [http://trac.edgewall.org/wiki/0.11 0.11.1] .  You can see it in action [https://opensvn.csie.org/traccgi/swlcu here] . 
+[http://trac.edgewall.org/ Trac]  [http://trac.edgewall.org/wiki/0.11 0.11.1] . 
+You can see it in action [https://opensvn.csie.org/traccgi/swlcu here] . 
 
 The first step to make it work is to [wiki:TracPlugins install this plugin] 
 either for a particular environment or otherwise make it available to

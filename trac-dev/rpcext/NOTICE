@@ -1,2 +1,8 @@
 
-Intentionally blank.
+This project has received help and contributions from many people. 
+Special thanks should be given to :
+
+  - Odd Simon Simonsen : for starting Trac RPC multi-protocol API 
+    used to build this plugin
+  - `thijs <http://trac-hacks.org/wiki/thijs>`_ : who provided a very 
+    useful patch that made AMF support possible.
