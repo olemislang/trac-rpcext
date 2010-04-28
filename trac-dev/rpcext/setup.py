@@ -49,7 +49,7 @@ cats = [
       "Intended Audience :: Information Technology", 
       "Intended Audience :: Other Audience", 
       "Intended Audience :: System Administrators", 
-      "License :: OSI Approved :: GNU General Public License", 
+      "License :: OSI Approved :: Apache Software License",
       "Natural Language :: English", 
       "Natural Language :: Spanish", 
       "Operating System :: OS Independent", 
