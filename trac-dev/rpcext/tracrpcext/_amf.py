@@ -71,7 +71,7 @@ class AMFProtocol(Component):
   >>> from pyamf.remoting import RemotingError
   >>> from pyamf.remoting.client import RemotingService
   >>> username, password = '$authname', 'mypassword'
-  >>> url = ${req.abs_href.login('rpc')}
+  >>> url = '${req.abs_href.login('rpc')}'
   >>> gw = RemotingService(url)
   >>> auth = base64.encodestring('%s:%s' % (username, password))[:-1]
   >>> gw.addHTTPHeader("Authorization", "Basic %s" % auth)
@@ -142,7 +142,7 @@ class AMFProtocol(Component):
 #    raise RequestDone()
   
   def send_rpc_error(self, req, e):
-    if isinstance(e, ProtocolError):
+    if isinstance(e, ProtocolException):
       self.log.exception("RPC(amf) Could not parse request from '%s'", 
                             req.authname)
       
