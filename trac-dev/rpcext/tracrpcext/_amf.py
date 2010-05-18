@@ -64,7 +64,7 @@ class AMFProtocol(Component):
   and [http://opensource.adobe.com/wiki/download/attachments/1114283/amf3_spec_05_05_08.pdf AMF 3].
   
   The following snippet illustrates how to perform authenticated calls 
-  using `pyamf`  library.
+  using the [http://www.pyamf.org PyAMF]  library.
   
   {{{
   >>> import base64
