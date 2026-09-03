@@ -1,0 +1,18 @@
+
+What's new in version 2.0.0
+---------------------------
+
+- Drop support for Python 2.
+  * Drop [PyAMF](https://pypi.org/project/PyAMF/) dependency.
+
+- Components tested with Trac>=1.4, TracXmlRPC>=1.2.0 and Python>=3.13.13.
+
+- Support for AMF protocol implemented by [Py3AMF](https://github.com/StdCarrot/Py3AMF) library.
+
+What's new in version 1.0.0
+---------------------------
+
+- Support for Hessian RPC.
+
+- Support for Adobe's Action Message Format (thanks to 
+  `thijs <http://trac-hacks.org/wiki/thijs>`_ for the original patch).

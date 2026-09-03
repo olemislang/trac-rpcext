@@ -24,6 +24,7 @@ from tracrpcext.__init__ import __doc__ as DESC
 
 versions = [
     (1, 0, 0),
+    (2, 0, 0),
     ]
     
 latest = '.'.join(str(x) for x in versions[-1])
@@ -104,21 +105,18 @@ setup(
 	url='https://opensvn.csie.org/traccgi/swlcu/wiki/En/Devel/%s' % (DIST_NM,),
   download_url='http://pypi.python.org/packages/2.5/%s/%s/%s-%s-py2.5.egg' % \
                                 (DIST_NM[0], DIST_NM, DIST_NM, latest,),
-  requires = ['trac',  'tracrpc',  'hessian', 'pyamf', 
-#              'soaplib',  'XMPPXMLRPCServer', 
-              ],
   install_requires = [
-      'setuptools>=0.6b1',
-      'Trac>=0.11',
-        'TracXMLRPC>=1.1.0', 
-        'HessianPy>=1.0.4', 
-        'PyAMF>=0.5',
+    'setuptools>=0.6b1',
+    'Trac>=1.6',
+    'TracXMLRPC>=1.1.0', 
+    'HessianPy>=1.0.4', 
+    'Py3AMF>=0.5',
 #        'soaplib>=0.8.1', 
 #        'xmppxmlrpc>=0.3', 
     ],
-  package_dir = dict([p, i[0]] for p, i in PKG_INFO.iteritems()),
+  package_dir = dict([p, i[0]] for p, i in PKG_INFO.items()),
   packages = PKG_INFO.keys(),
-  package_data = dict([p, i[1]] for p, i in PKG_INFO.iteritems()),
+  package_data = dict([p, i[1]] for p, i in PKG_INFO.items()),
   include_package_data=True,
   provides = ['%s (%s)' % (p, latest) for p in PKG_INFO.keys()],
   obsoletes = ['%s (>=%s.0.0, <%s)' % (p, versions[-1][0], latest) \

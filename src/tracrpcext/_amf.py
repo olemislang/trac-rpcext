@@ -31,30 +31,31 @@ Licensed under the Apache version 2 License
 """
 __author__ = 'Olemis Lang'
 
+from io import StringIO
+import sys
+from traceback import format_exc
+from types import GeneratorType
+
 from trac.core import Component, implements, TracError
 from trac.perm import PermissionError
 from trac.resource import ResourceNotFound
-from trac.web.api import HTTPBadRequest, HTTPInternalError, \
+from trac.web.api import HTTPBadRequest, HTTPInternalServerError, \
                           HTTPUnauthorized, RequestDone
-
 from tracrpc.api import IRPCProtocol, XMLRPCSystem, ProtocolException
-from tracrpc.util import StringIO, prepare_docs
-
-from tracrpcext.exc import *
+from tracrpc.util import cleandoc_, gettext
 
 import pyamf as amf
 from pyamf import remoting
 from pyamf.remoting import gateway
-import sys
-from traceback import format_exc
-from types import GeneratorType
+
+from tracrpcext.exc import *
 
 __all__ = 'AMFProtocol',
 
 __metaclass__ = type
 
 class AMFProtocol(Component):
-  r"""
+  _description = cleandoc_(r"""
   [http://en.wikipedia.org/wiki/Action_Message_Format AMF] is a binary 
   protocol designed by ''Macromedia'', now [http://www.adobe.com Adobe Systems],
   to provide a lightweight, efficient means to serialize, deserialize, and transport 
@@ -62,10 +63,10 @@ class AMFProtocol(Component):
   and the ''Flash Remoting gateway''. This module adds support for 
   [http://opensource.adobe.com/wiki/download/attachments/1114283/amf0_spec_121207.pdf AMF 0] 
   and [http://opensource.adobe.com/wiki/download/attachments/1114283/amf3_spec_05_05_08.pdf AMF 3].
-  
+
   The following snippet illustrates how to perform authenticated calls 
   using the [http://www.pyamf.org PyAMF]  library.
-  
+
   {{{
   >>> import base64
   >>> from pyamf.remoting import RemotingError
@@ -79,21 +80,26 @@ class AMFProtocol(Component):
   >>> print service.getAPIVersion()
   [${', '.join(rpc.version.split('.'))}]
   }}}
-  """
+
+  Implementation details:
+
+    * Request `"id"` is required, as stated in section 4.1.3 of AMF0 specification,
+      and therefore any marker value received with a request is returned with the response.
+  """)
   implements(IRPCProtocol)
-  
+
   # IRPCProtocol methods
   def rpc_info(self):
     r"""Protocol description.
     """
-    return 'AMF', prepare_docs(self.__doc__, indent=2)
-  
+    return 'AMF', gettext(self._description)
+
   def rpc_match(self):
     r"""URL mapping for this protocol.
     """
     yield 'rpc', 'application/x-amf'
     yield 'amfrpc', 'application/x-amf'
-  
+
   def parse_rpc_request(self, req, content_type):
     """ Parse AMF RPC requests"""
     self.debug = False
@@ -103,10 +109,10 @@ class AMFProtocol(Component):
     # Decode the request
     try:
       request = remoting.decode(body, strict=False, logger=self.log)
-    except (amf.DecodeError, IOError):
+    except (amf.DecodeError, IOError) as exc:
       raise ProtocolException("400 Bad Request\n\nThe request body " \
                               "was unable to be successfully decoded.")
-    except Exception, e:
+    except Exception as e:
       raise
     else :
       # TODO: What about multicall ?
@@ -120,14 +126,14 @@ class AMFProtocol(Component):
       args = args or []
       return {'id' : r_id, 'method' : method, 'params' : args, 
               'request' : request}
-  
+
   def send_rpc_result(self, req, result):
     request = req.rpc['request']
     response = remoting.Envelope(request.amfVersion, request.clientType)
-    
+
     for name, message in request:
       response[name] = remoting.Response(result)
-    
+
     try :
       stream = remoting.encode(response, strict=False)
     except:
@@ -135,25 +141,25 @@ class AMFProtocol(Component):
                             "'%s' invoked by '%s'", 
                             req.rpc['method'], req.authname)
         raise
-    
+
     response = stream.getvalue()
     self.log.debug("RPC(amf) encoded result: %s", stream)
     self._send_response(req, response, remoting.CONTENT_TYPE)
 #    raise RequestDone()
-  
+
   def send_rpc_error(self, req, e):
     if isinstance(e, ProtocolException):
       self.log.exception("RPC(amf) Could not parse request from '%s'", 
                             req.authname)
-      
+
       # TODO: Confirm whether HTTPBadRequest should be used or not
       errcode, errmsg = HTTPBadRequest.code, e.message
     elif isinstance(e, (ServiceException, RPCError)):
       self.log.exception("RPC(amf) Call to '%s' by '%s' failed", 
                             req.rpc['method'], req.authname)
-      
+
       # TODO: Confirm whether HTTPBadRequest should be used or not
-      errcode = HTTPInternalError.code
+      errcode = HTTPInternalServerError.code
       errmsg = "Internal error: Method '%s' failed unexpectedly. " \
                           "Consult log for further details."
     elif isinstance(e, PermissionError):
@@ -161,16 +167,16 @@ class AMFProtocol(Component):
       self.log.warning("RPC(amf) Call to '%s' by '%s' failed: %s", 
                             req.rpc['method'], req.authname, errmsg)
     elif isinstance(e, ResourceNotFound):
-      errcode, errmsg = HTTPInternalError.code, unicode(e)
+      errcode, errmsg = HTTPInternalServerError.code, unicode(e)
       self.log.warning("RPC(amf) Call to '%s' by '%s' failed: %s", 
                             req.rpc['method'], req.authname, errmsg)
     else :
       self.log.exception("RPC(amf) Call to '%s' by '%s' failed", 
                             req.rpc['method'], req.authname)
-      errcode, errmsg = HTTPInternalError.code, "Unexpected error."
+      errcode, errmsg = HTTPInternalServerError.code, "Unexpected error."
     req.send_error(None, template='', content_type='text/plain',
                     status=errcode, env=None, data=errmsg)
-  
+
   # Internal methods
   def _send_response(self, req, content, content_type='text/html', status=200):
     req.send_response(status)
@@ -178,7 +184,7 @@ class AMFProtocol(Component):
     req.send_header('Content-Type', content_type)
     req.send_header('Content-Length', len(content))
     req.end_headers()
-    
+
     if req.method != 'HEAD':
       req.write(content)
     raise RequestDone

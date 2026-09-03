@@ -1,8 +1,0 @@
-
-What's new in version 1.0.0
----------------------------
-
-- Added support for Hessian RPC.
-
-- Added support for Adobe's Action Message Format (thanks to 
-  `thijs <http://trac-hacks.org/wiki/thijs>`_ for the original patch).

@@ -27,27 +27,28 @@ Licensed under the Apache version 2 License
 """
 __author__ = 'Olemis Lang'
 
+from io import StringIO
+import sys
+from traceback import format_exc
+from types import GeneratorType
+
 from trac.core import Component, implements, TracError
 from trac.perm import PermissionError
 from trac.resource import ResourceNotFound
 
 from tracrpc.api import IRPCProtocol, XMLRPCSystem
-from tracrpc.util import StringIO, prepare_docs
-
-from tracrpcext.exc import *
+from tracrpc.util import cleandoc_, gettext
 
 from hessian.hessian import ParseContext, Call, HessianError, Reply, \
                             WriteContext
-import sys
-from traceback import format_exc
-from types import GeneratorType
+from tracrpcext.exc import *
 
 __all__ = 'HessianProtocol',
 
 __metaclass__ = type
 
 class HessianProtocol(Component):
-  r"""
+  _description = cleandoc_(r"""
   [http://hessian.caucho.com/doc/hessian-overview.xtp Hessian] is a 
   dynamically-typed binary RPC protocol. This component adds support for 
   [http://hessian.caucho.com/doc/hessian-1.0-spec.xtp version 1.0].
@@ -62,14 +63,19 @@ class HessianProtocol(Component):
   >>> getattr(hsp, 'system.getAPIVersion')()
   [${', '.join(rpc.version.split('.'))}]
   }}}
-  """
+
+  Implementation details:
+
+    * `"id"` is optional, and any marker value received with a
+      request is returned with the response.
+  """)
   implements(IRPCProtocol)
   
   # IRPCProtocol methods
   def rpc_info(self):
     r"""Protocol description.
     """
-    return 'Hessian', prepare_docs(self.__doc__, indent=2)
+    return 'Hessian', gettext(self._description)
   
   def rpc_match(self):
     r"""URL mapping for this protocol.
@@ -83,7 +89,7 @@ class HessianProtocol(Component):
       hctx = ParseContext(req)
       return dict(zip(['method', 'headers', 'params'], \
                         Call().read(hctx, hctx.read(1))))
-    except HessianError, e :
+    except HessianError as e :
       raise ProtocolException(e)
       
   def send_rpc_result(self, req, result):
