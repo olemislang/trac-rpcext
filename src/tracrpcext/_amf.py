@@ -98,7 +98,6 @@ class AMFProtocol(Component):
     r"""URL mapping for this protocol.
     """
     yield 'rpc', 'application/x-amf'
-    yield 'amfrpc', 'application/x-amf'
 
   def parse_rpc_request(self, req, content_type):
     """ Parse AMF RPC requests"""

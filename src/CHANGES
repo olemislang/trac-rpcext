@@ -9,6 +9,14 @@ What's new in version 2.0.0
 
 - Support for AMF protocol implemented by [Py3AMF](https://github.com/StdCarrot/Py3AMF) library.
 
+- Hessian RPC no longer available at /hessian
+
+- AMF RPC no longer available at /amf
+
+- Hessian available at /rpc when content type application/x-hessian is requested
+
+- AMF RPC available at /rpc when content type application/x-amf is requested
+
 What's new in version 1.0.0
 ---------------------------
 

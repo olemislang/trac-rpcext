@@ -80,8 +80,7 @@ class HessianProtocol(Component):
   def rpc_match(self):
     r"""URL mapping for this protocol.
     """
-    # yield 'rpc', 'application/octet-stream'
-    yield 'hessian', 'application/octet-stream'
+    yield 'rpc', 'application/x-hessian'
   
   def parse_rpc_request(self, req, content_type):
     """ Parse Hessian RPC requests"""
