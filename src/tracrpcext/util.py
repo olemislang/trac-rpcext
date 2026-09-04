@@ -25,3 +25,32 @@ __author__ = 'Olemis Lang'
 
 __metaclass__ = type
 
+import logging
+try:
+  from threading import get_native_id as get_thread_id
+except ImportError:
+  from threading import get_ident as get_thread_id
+import types
+
+from trac.util.datefmt import format_datetime
+
+logging = types.SimpleNamespace(
+  RPCERROR = (logging.WARNING + logging.ERROR) // 2,
+  rpcerror = lambda log, msg, *args, **kwargs: log.log(logging.RPCERROR,
+                                                       msg,
+                                                       *args, **kwargs),
+)
+
+def timestamp_label():
+  '''Label to identify a moment in time.
+
+  Currently formed by joining current date and time plus native thread ID.
+  '''
+  return ':'.join(
+    format_datetime(format='medium').translate(
+      str.maketrans('', '', ':-T')
+    ),
+    get_thread_id()
+  )
+
+

@@ -9,13 +9,19 @@ What's new in version 2.0.0
 
 - Support for AMF protocol implemented by [Py3AMF](https://github.com/StdCarrot/Py3AMF) library.
 
-- Hessian RPC no longer available at /hessian
+- Support for Hessian serialization implemented by [python-hessian](https://github.com/theatlantic/python-hessian) library.
 
-- AMF RPC no longer available at /amf
+- Hessian RPC no longer available at /hessian.
 
-- Hessian available at /rpc when content type application/x-hessian is requested
+- Hessian available at /rpc when content type application/x-hessian is requested.
+
+- AMF RPC no longer available at /amf.
 
 - AMF RPC available at /rpc when content type application/x-amf is requested
+
+- Log RPC errors at custom level between ERROR and WARNING.
+
+- On error, return log ref ID to the caller instead of full stack traces.
 
 What's new in version 1.0.0
 ---------------------------

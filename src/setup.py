@@ -109,7 +109,7 @@ setup(
     'setuptools>=0.6b1',
     'Trac>=1.6',
     'TracXMLRPC>=1.1.0', 
-    'HessianPy>=1.0.4', 
+    'python-hessian>=1.2.0', 
     'Py3AMF>=0.5',
 #        'soaplib>=0.8.1', 
 #        'xmppxmlrpc>=0.3', 
