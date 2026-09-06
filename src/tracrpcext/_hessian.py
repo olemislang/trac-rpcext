@@ -91,21 +91,26 @@ class HessianProtocol(Component):
   _description = cleandoc_(r"""
   [http://hessian.caucho.com/doc/hessian-overview.xtp Hessian] is a 
   dynamically-typed binary RPC protocol. This component adds support for 
-  [http://hessian.caucho.com/doc/hessian-1.0-spec.xtp version 1.0].
+  [http://hessian.caucho.com/doc/hessian-1.0-spec.xtp version 1.0] and
+  [http://hessian.caucho.com/doc/hessian-ws.html version 2.0]. There are
+  [client implementations](http://hessian.caucho.com/#HessianImplementationsDownload)
+  available for some popular programming languages.
 
   The following snippet illustrates how to perform authenticated calls 
-  using `HessianPy`  library.
+  using `python-hessian`  library.
 
   {{{
-  >>> from hessian.client import HessianProxy as HSP
-  >>> hsp = HSP('${req.abs_href.login('hessian')}', {'username' : '$authname', \
+  >>> from pyhessian.client import HessianProxy
+  >>> hsp = HessianProxy('${req.abs_href.login('hessian')}', {'username' : '$authname', \
                                                 'password' : 'your_password'})
-  >>> getattr(hsp, 'system.getAPIVersion')()
+  >>> hsp.system.getAPIVersion()
   [${', '.join(rpc.version.split('.'))}]
   }}}
 
   Implementation details:
 
+    * Hessian calls must include Content-Type: application/x-hessian
+      header and shall sent to /rpc path relative to the Trac instance base URL..
     * `"id"` is optional, and any marker value received with a
       request is returned with the response.
     * Fields overload and version of Hessian calls are ignored.

@@ -4,8 +4,9 @@ What's new in version 2.0.0
 
 - Drop support for Python 2.
   * Drop [PyAMF](https://pypi.org/project/PyAMF/) dependency.
+  * Drop [HessianPy](https://pypi.org/project/HessianPy/) dependency.
 
-- Components tested with Trac>=1.4, TracXmlRPC>=1.2.0 and Python>=3.13.13.
+- Components tested with Trac>=0.12, TracXmlRPC>=1.2.0 and Python>=3.13.13.
 
 - Support for AMF protocol implemented by [Py3AMF](https://github.com/StdCarrot/Py3AMF) library.
 
@@ -22,6 +23,9 @@ What's new in version 2.0.0
 - Log RPC errors at custom level between ERROR and WARNING.
 
 - On error, return log ref ID to the caller instead of full stack traces.
+
+- Tests for Hessian protocol implementation using
+  [python-hessian](https://github.com/theatlantic/python-hessian) client.
 
 What's new in version 1.0.0
 ---------------------------
