@@ -26,8 +26,7 @@ License: Apache License 2.0
 import unittest
 
 from tracrpcext._hessian import HessianProtocol
-from tracrpc.tests import (HTTPError, Request, urlopen, makeSuite,
-                           TracRpcTestCase, TracRpcTestSuite)
+from tracrpc.tests import makeSuite, TracRpcTestCase, TracRpcTestSuite
 
 class ProtocolProviderTestCase(TracRpcTestCase):
     def setUp(self):
