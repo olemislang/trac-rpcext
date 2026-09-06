@@ -83,16 +83,20 @@ class AMFProtocol(Component):
 
   Implementation details:
 
+    * AMF calls must include Content-Type: application/x-amf
+      header and shall sent to /rpc path relative to the Trac instance base URL.
     * Request `"id"` is required, as stated in section 4.1.3 of AMF0 specification,
       and therefore any marker value received with a request is returned with the response.
   """)
   implements(IRPCProtocol)
 
+  RPC_PROTO = 'AMF'
+
   # IRPCProtocol methods
   def rpc_info(self):
     r"""Protocol description.
     """
-    return 'AMF', gettext(self._description)
+    return self.RPC_PROTO, gettext(self._description)
 
   def rpc_match(self):
     r"""URL mapping for this protocol.

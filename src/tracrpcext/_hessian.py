@@ -103,14 +103,14 @@ class HessianProtocol(Component):
   >>> from pyhessian.client import HessianProxy
   >>> hsp = HessianProxy('${req.abs_href.login('hessian')}', {'username' : '$authname', \
                                                 'password' : 'your_password'})
-  >>> hsp.system.getAPIVersion()
+  >>> getattr(hsp, "system.getAPIVersion")()
   [${', '.join(rpc.version.split('.'))}]
   }}}
 
   Implementation details:
 
     * Hessian calls must include Content-Type: application/x-hessian
-      header and shall sent to /rpc path relative to the Trac instance base URL..
+      header and shall sent to /rpc path relative to the Trac instance base URL.
     * `"id"` is optional, and any marker value received with a
       request is returned with the response.
     * Fields overload and version of Hessian calls are ignored.
