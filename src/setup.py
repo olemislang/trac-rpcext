@@ -91,7 +91,8 @@ PKG_INFO = {'tracrpcext' : ('tracrpcext',                     # Package dir
 
 ENTRY_POINTS = r"""
                [trac.plugins]
-               tracrpcext = tracrpcext
+               amf     = tracrpcext._amf
+               hessian = tracrpcext._hessian
                """
 
 setup(
