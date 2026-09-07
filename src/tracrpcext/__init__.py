@@ -32,9 +32,13 @@ Licensed under the Apache version 2 License
 """
 __author__ = 'Olemis Lang'
 
+import sys
+
 try:
     # Ignore errors to avoid Internal Server Errors
     from trac.core import TracError
+    if sys.version[0] > 2:
+        unicode = str
     TracError.__str__ = lambda self: unicode(self).encode('ascii', 'ignore')
 
     from _amf import *
@@ -43,3 +47,4 @@ try:
 except Exception as exc:
 #    raise
     msg = "Exception %s raised: '%s'" % (exc.__class__.__name__, str(exc))
+
