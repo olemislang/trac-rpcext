@@ -34,6 +34,7 @@ from types import GeneratorType
 from trac.core import Component, implements, TracError
 from trac.perm import PermissionError
 from trac.resource import ResourceNotFound
+from trac.util.text import to_unicode
 from trac.web.api import HTTPBadRequest 
 
 from tracrpc.api import IRPCProtocol, XMLRPCSystem
@@ -69,6 +70,9 @@ for t, lbl in (
 
 @six.add_metaclass(encoder.EncoderBase)
 class HessianRpcEncoder(object):
+    def __init__(self):
+        self._refs = []
+
     @encoder.encoder_for(protocol.Reply)
     def encode_reply(self, reply):
         if reply.version > 1 and isinstance(reply.value, (protocol.Fault, Fault)):
@@ -83,7 +87,7 @@ class HessianRpcEncoder(object):
             headers += pack('>cH', b'H', len(header)) + header
             headers += self.encode(value)
 
-        data_type, encoded_reply_value = self.encode(reply.value)
+        data_type, encoded_reply_value = self._encode(reply.value)
 
         if reply.version == 1:
             encoded = pack('>cBB', b'r', reply.version, 0)
@@ -94,9 +98,8 @@ class HessianRpcEncoder(object):
             encoded = pack('>cBBc', b'H', reply.version, 0, b'R')
             encoded += headers
             encoded += encoded_reply_value 
-            encoded += b'Z'
 
-        return 'reply', encoded
+        return encoded
 
     def _encode_fault_v1(self, fault):
         encoded = b''.join(self.encode_keyval((key, getattr(fault, key)))
@@ -106,18 +109,17 @@ class HessianRpcEncoder(object):
     @encoder.encoder_for(protocol.Fault)
     def encode_pyhessian_fault(self, fault):
         # No version context. Default to version=1
-        return ('fault', self._encode_fault_v1(fault))
+        return self._encode_fault_v1(fault)
 
     @encoder.encoder_for(Fault)
     def encode_fault(self, fault):
         if fault.version == 1:
-            return ('fault', self._encode_fault_v1(fault))
+            return self._encode_fault_v1(fault)
         # Protocol version >= 2
         encoded = b''.join(self.encode_keyval((key, getattr(fault, key)))
                            for key in ('code', 'message', 'detail')) 
-        return ('fault',
-            pack('>cBBcc', b'H', fault.version, 0, b'F', b'H') + encoded + b'Z'
-        )
+        return pack('>cBBcc', b'H', fault.version, 0, b'F', b'H') + encoded + b'Z'
+            
 
     # Copy all methods in encoder.Encoder
     _encode = encoder.Encoder.__dict__['_encode']
@@ -204,14 +206,22 @@ class HessianProtocol(Component):
     else:
       try:
         call = parser.Parser().parse_string(req.read(clen))
-        return {
+        result = {
           field : getattr(call, field, None)
-          for field in ('method', 'headers', 'params', 'version')
+          for field in ('method', 'headers', 'version')
         }
-      # FIXME: Function _decode_surrogate_pair in python-hessian
-      # raises instances of built-in Exception class.
-      except parser.ParseError as e :
+        result['params'] = call.args
+        result['version'] = int(result['version'])
+        # Copy before TracRPC since version is needed to send Fault back
+        req.rpc = result
+        result['method'] = to_unicode(result['method'])
+        return result
+      except (parser.ParseError, TypeError) as e :
         raise ProtocolException(e)
+      except Exception as e:
+        # FIXME: Function _decode_surrogate_pair in python-hessian
+        # raises instances of built-in Exception class.
+        raise ServiceException(e)
 
   def send_rpc_result(self, req, result):
     self._send_hessian_resp(req, result, True)
@@ -247,7 +257,7 @@ class HessianProtocol(Component):
   # Internal methods
 
   def _encode_reply(self, value):
-    return HessianRpcEncoder().encode(value)[1]
+    return HessianRpcEncoder().encode(value)
 
   def _send_hessian_resp(self, req, result, succeeded):
     rpcreq = req.rpc
@@ -255,9 +265,9 @@ class HessianProtocol(Component):
     if succeeded:
       result = protocol.Reply(result,
                               headers=rpcreq.get('headers'),
-                              version=rpcreq.get('version'))
+                              version=rpcreq.get('version', 1))
     else:
-      version = rpcreq.get('version')
+      version = rpcreq.get('version', 1)
       result = Fault(result['code'],
                      result['message'],
                      result['detail'],
