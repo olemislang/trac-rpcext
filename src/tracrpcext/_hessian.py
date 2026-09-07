@@ -50,9 +50,19 @@ __all__ = 'HessianProtocol',
 # Register Hessian types for serialization
 # FIXME : Remove once https://github.com/olemislang/python-hessian PR is merged in
 
+class Fault(protocol.Fault):
+    '''Hessian Fault aware of protocol version.
+
+    Needed for serialization.
+    '''
+    def __init__(self, code, message, detail, version=None):
+        super(Fault, self).__init__(code, message, detail)
+        self.version = version
+
 for t, lbl in (
     (protocol.Reply, 'reply'),
     (protocol.Fault, 'fault'),
+    (Fault,          'fault'),
 ):
     encoder.RETURN_TYPES[t] = lbl
 
@@ -61,32 +71,53 @@ for t, lbl in (
 class HessianRpcEncoder(object):
     @encoder.encoder_for(protocol.Reply)
     def encode_reply(self, reply):
-       headers = b''
-       args = b''
+        if reply.version > 1 and isinstance(reply.value, (protocol.Fault, Fault)):
+            raise TypeError(f'Reply value may not be Fault in version {reply.version}')
 
-       for header, value in reply.headers.items():
-         if not isinstance(header, str):
-           raise TypeError("Reply header keys must be strings")
+        headers = b''
 
-         headers += pack('>cH', b'H', len(header)) + header
-         headers += self.encode(value)
+        for header, value in reply.headers.items():
+            if not isinstance(header, str):
+                raise TypeError("Reply header keys must be strings")
 
-       data_type, encoded_reply_value = self.encode(reply.value)
+            headers += pack('>cH', b'H', len(header)) + header
+            headers += self.encode(value)
 
-       encoded = pack('>cBB', 'r', reply.version, 0)
-       encoded += headers
-       encoded += encoded_reply_value 
-       encoded += b'z'
+        data_type, encoded_reply_value = self.encode(reply.value)
 
-       return 'reply', encoded
+        if reply.version == 1:
+            encoded = pack('>cBB', b'r', reply.version, 0)
+            encoded += headers
+            encoded += encoded_reply_value 
+            encoded += b'z'
+        else:
+            encoded = pack('>cBBc', b'H', reply.version, 0, b'R')
+            encoded += headers
+            encoded += encoded_reply_value 
+            encoded += b'Z'
+
+        return 'reply', encoded
+
+    def _encode_fault_v1(self, fault):
+        encoded = b''.join(self.encode_keyval((key, getattr(fault, key)))
+                           for key in ('code', 'message', 'detail')) 
+        return pack('>c', b'f') + encoded + b'z'
 
     @encoder.encoder_for(protocol.Fault)
+    def encode_pyhessian_fault(self, fault):
+        # No version context. Default to version=1
+        return ('fault', self._encode_fault_v1(fault))
+
+    @encoder.encoder_for(Fault)
     def encode_fault(self, fault):
-      encoded = b''.join(self.encode_keyval((key, getattr(fault, key)))
-                         for key in ('code', 'message', 'detail')) 
-      return ('fault',
-        pack('>c', b'f') + pack('>c', b'h') + encoded + b'z'
-      )
+        if fault.version == 1:
+            return ('fault', self._encode_fault_v1(fault))
+        # Protocol version >= 2
+        encoded = b''.join(self.encode_keyval((key, getattr(fault, key)))
+                           for key in ('code', 'message', 'detail')) 
+        return ('fault',
+            pack('>cBBcc', b'H', fault.version, 0, b'F', b'H') + encoded + b'Z'
+        )
 
     # Copy all methods in encoder.Encoder
     _encode = encoder.Encoder.__dict__['_encode']
@@ -216,9 +247,7 @@ class HessianProtocol(Component):
   # Internal methods
 
   def _encode_reply(self, value):
-    return HessianRpcEncoder().encode_reply(
-      protocol.Reply(value)
-    )[1]
+    return HessianRpcEncoder().encode(value)[1]
 
   def _send_hessian_resp(self, req, result, succeeded):
     rpcreq = req.rpc
@@ -228,9 +257,17 @@ class HessianProtocol(Component):
                               headers=rpcreq.get('headers'),
                               version=rpcreq.get('version'))
     else:
-      result = protocol.Fault(result['code'],
-                              result['message'],
-                              result['detail'])
+      version = rpcreq.get('version')
+      result = Fault(result['code'],
+                     result['message'],
+                     result['detail'],
+                     version=version)
+      if version == 1:
+        # Wrap into Reply for Hessian v1
+        result = protocol.Reply(result,
+                                headers=rpcreq.get('headers'),
+                                version=version)
+
     reply = self._encode_reply(result)
 #    self.log.debug("RPC(hessian) Return value : %s", reply)
     req.send(reply, content_type='application/x-hessian')

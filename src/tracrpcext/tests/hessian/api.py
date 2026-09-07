@@ -29,7 +29,7 @@ from tracrpc.tests import makeSuite, TracRpcTestCase
 
 from pyhessian import encoder, protocol
 
-from tracrpcext._hessian import HessianRpcEncoder, HessianProtocol
+from tracrpcext._hessian import Fault, HessianRpcEncoder, HessianProtocol
 from tracrpcext.tests.util import TracRpcProtocolTestSuite
 
 class HessianEncoderTestCase(unittest.TestCase):
@@ -43,21 +43,47 @@ class HessianEncoderTestCase(unittest.TestCase):
         self.assertIn(protocol.Fault, encoder.RETURN_TYPES)
         self.assertIn(protocol.Reply, encoder.RETURN_TYPES)
 
-    def test_encode_fault(self):
-        # Ref : http://hessian.caucho.com/doc/hessian-ws.html#anchor16
-        r = self.encoder.encode(protocol.Fault(
+    def test_encode_fault_v1(self):
+        # Ref : http://hessian.caucho.com/doc/hessian-1.0-spec.xtp#Faults
+        for f, msg in (
+          (Fault(
             code='ServiceException',
             message='File Not Found',
             detail='java.io.FileNotFoundException',
+            version=1,
+          ), 'tracrpcext.hessian.Fault version=1'),
+          (protocol.Fault(
+            code='ServiceException',
+            message='File Not Found',
+            detail='java.io.FileNotFoundException',
+          ), 'python-hessian.Falut'),
+        ):
+          r = self.encoder.encode(f)
+          self.assertIsInstance(r, tuple, msg=msg)
+          self.assertEqual(len(r), 2, msg=msg)
+          self.assertEqual(r[0], 'fault', msg=msg)
+          self.assertEqual(r[1],
+                           b'fS\x00\x04codeS\x00\x10ServiceException'
+                           b'S\x00\x07messageS\x00\x0eFile Not Found'
+                           b'S\x00\x06detailS\x00\x1djava.io.FileNotFoundException'
+                           b'z', msg=msg)
+
+    def test_encode_fault_v2(self):
+        # Ref : http://hessian.caucho.com/doc/hessian-ws.html#anchor16
+        r = self.encoder.encode(Fault(
+            code='ServiceException',
+            message='File Not Found',
+            detail='java.io.FileNotFoundException',
+            version=2,
         ))
         self.assertIsInstance(r, tuple)
         self.assertEqual(len(r), 2)
         self.assertEqual(r[0], 'fault')
         self.assertEqual(r[1],
-                         b'fhS\x00\x04codeS\x00\x10ServiceException'
+                         b'H\x02\x00FHS\x00\x04codeS\x00\x10ServiceException'
                          b'S\x00\x07messageS\x00\x0eFile Not Found'
                          b'S\x00\x06detailS\x00\x1djava.io.FileNotFoundException'
-                         b'z')
+                         b'Z')
 
 class ProtocolProviderTestCase(TracRpcTestCase):
     def setUp(self):
