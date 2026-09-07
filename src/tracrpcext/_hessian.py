@@ -34,30 +34,31 @@ from types import GeneratorType
 from trac.core import Component, implements, TracError
 from trac.perm import PermissionError
 from trac.resource import ResourceNotFound
+from trac.web.api import HTTPBadRequest 
 
 from tracrpc.api import IRPCProtocol, XMLRPCSystem
 from tracrpc.util import cleandoc_, gettext
 
-#from hessian.hessian import ParseContext, Call, HessianError, Reply, \
-#                            WriteContext
-
 from pyhessian import encoder, parser, protocol
+import six
 
 from tracrpcext.exc import *
 from tracrpcext import util
 
 __all__ = 'HessianProtocol',
 
-__metaclass__ = type
-
 # Register Hessian types for serialization
 # FIXME : Remove once https://github.com/olemislang/python-hessian PR is merged in
 
-for t, lbl in ((protocol.Reply, 'reply'),
-               (protocol.Fault, 'fault')):
-  encoder.RETURN_TYPES[t] = lbl
+for t, lbl in (
+    (protocol.Reply, 'reply'),
+    (protocol.Fault, 'fault'),
+):
+    encoder.RETURN_TYPES[t] = lbl
 
-class HessianRpcEncoder(encoder.Encoder):
+
+@six.add_metaclass(encoder.EncoderBase)
+class HessianRpcEncoder(object):
     @encoder.encoder_for(protocol.Reply)
     def encode_reply(self, reply):
        headers = b''
@@ -77,15 +78,46 @@ class HessianRpcEncoder(encoder.Encoder):
        encoded += encoded_reply_value 
        encoded += b'z'
 
-       return encoded
+       return 'reply', encoded
 
     @encoder.encoder_for(protocol.Fault)
     def encode_fault(self, fault):
-       encoded = b''.join(self.encode_keyval(key, getattr(fault, key))
-                          for key in ('code', 'message', 'detail')) 
-       return pack('>c', b'f') + encoded + b'z'
+      encoded = b''.join(self.encode_keyval((key, getattr(fault, key)))
+                         for key in ('code', 'message', 'detail')) 
+      return ('fault',
+        pack('>c', b'f') + pack('>c', b'h') + encoded + b'z'
+      )
 
-  # Trac components
+    # Copy all methods in encoder.Encoder
+    _encode = encoder.Encoder.__dict__['_encode']
+    add_ref = encoder.Encoder.__dict__['add_ref']
+    encode = encoder.Encoder.__dict__['encode']
+    encode_arg = encoder.Encoder.__dict__['encode_arg']
+    encode_null = encoder.Encoder.__dict__['encode_null']
+    encode_boolean = encoder.Encoder.__dict__['encode_boolean']
+    encode_int = encoder.Encoder.__dict__['encode_int']
+    encode_long = encoder.Encoder.__dict__['encode_long']
+    encode_double = encoder.Encoder.__dict__['encode_double']
+    encode_date = encoder.Encoder.__dict__['encode_date']
+    high_codepoints_re = encoder.Encoder.__dict__['high_codepoints_re']
+    _unicode_encode = encoder.Encoder.__dict__['_unicode_encode']
+    _encode_to_surrogate_pair = encoder.Encoder.__dict__['_encode_to_surrogate_pair']
+    encode_unicode = encoder.Encoder.__dict__['encode_unicode']
+    if 'encode_string' in encoder.Encoder.__dict__:
+        encode_string = encoder.Encoder.__dict__['encode_string']
+    encode_list = encoder.Encoder.__dict__['encode_list']
+    encode_tuple = encoder.Encoder.__dict__['encode_tuple']
+    encode_keyval = encoder.Encoder.__dict__['encode_keyval']
+    encode_map = encoder.Encoder.__dict__['encode_map']
+    encode_mobject = encoder.Encoder.__dict__['encode_mobject']
+    encode_remote = encoder.Encoder.__dict__['encode_remote']
+    encode_binary = encoder.Encoder.__dict__['encode_binary']
+    encode_call = encoder.Encoder.__dict__['encode_call']
+
+
+# Trac components
+
+__metaclass__ = type
 
 class HessianProtocol(Component):
   _description = cleandoc_(r"""
@@ -133,15 +165,22 @@ class HessianProtocol(Component):
   def parse_rpc_request(self, req, content_type):
     """ Parse Hessian RPC requests"""
     try :
-      call = parser.Parser().parse_string(
-        req.read(req.get_header('Content-Length'))
-      )
-      return {
-        field : getattr(call, field, None)
-        for field in ('method', 'headers', 'params', 'version')
-      }
-    except HessianError as e :
-      raise ProtocolException(e)
+      clen = int(req.get_header('Content-Length'))
+    except:
+      raise HTTPBadRequest('Invalid value ' + 
+                           repr(req.get_header('Content-Length')) +
+                           ' for Content-Length header') 
+    else:
+      try:
+        call = parser.Parser().parse_string(req.read(clen))
+        return {
+          field : getattr(call, field, None)
+          for field in ('method', 'headers', 'params', 'version')
+        }
+      # FIXME: Function _decode_surrogate_pair in python-hessian
+      # raises instances of built-in Exception class.
+      except parser.ParseError as e :
+        raise ProtocolException(e)
 
   def send_rpc_result(self, req, result):
     self._send_hessian_resp(req, result, True)
@@ -167,7 +206,7 @@ class HessianProtocol(Component):
     stack_trace = sys.exc_info()
     msg = f'RPC({self.RPC_PROTO}) reference : {ts}'
     util.logging.rpcerror(self.log, msg, exc_info=stack_trace)
-    result = {'details' : msg, 
+    result = {'detail' : msg, 
               'code': self.ERROR_CODES.get(e.__class__, 'ServiceException'), 
               'message' : str(e)}
     # FIXME: Should all fields be sent back to the caller?
@@ -184,15 +223,15 @@ class HessianProtocol(Component):
   def _send_hessian_resp(self, req, result, succeeded):
     rpcreq = req.rpc
     # FIXME : Should all headers be echoed back to the caller?
-    if not succeeded:
-       result = Fault(result['code'],
-                      result['message'],
-                      result['detail'])
-    reply = self._encode_reply(
-      Reply(result,
-            headers=rpcreq.get('headers'),
-            version=rpcreq.get('version'))
-    )
+    if succeeded:
+      result = protocol.Reply(result,
+                              headers=rpcreq.get('headers'),
+                              version=rpcreq.get('version'))
+    else:
+      result = protocol.Fault(result['code'],
+                              result['message'],
+                              result['detail'])
+    reply = self._encode_reply(result)
 #    self.log.debug("RPC(hessian) Return value : %s", reply)
     req.send(reply, content_type='application/x-hessian')
 

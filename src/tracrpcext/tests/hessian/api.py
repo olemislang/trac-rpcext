@@ -25,8 +25,39 @@ License: Apache License 2.0
 
 import unittest
 
-from tracrpcext._hessian import HessianProtocol
-from tracrpc.tests import makeSuite, TracRpcTestCase, TracRpcTestSuite
+from tracrpc.tests import makeSuite, TracRpcTestCase
+
+from pyhessian import encoder, protocol
+
+from tracrpcext._hessian import HessianRpcEncoder, HessianProtocol
+from tracrpcext.tests.util import TracRpcProtocolTestSuite
+
+class HessianEncoderTestCase(unittest.TestCase):
+    def setUp(self):
+        self.encoder = HessianRpcEncoder()
+
+    def tearDown(self):
+        del self.encoder
+
+    def test_encoder_setup(self):
+        self.assertIn(protocol.Fault, encoder.RETURN_TYPES)
+        self.assertIn(protocol.Reply, encoder.RETURN_TYPES)
+
+    def test_encode_fault(self):
+        # Ref : http://hessian.caucho.com/doc/hessian-ws.html#anchor16
+        r = self.encoder.encode(protocol.Fault(
+            code='ServiceException',
+            message='File Not Found',
+            detail='java.io.FileNotFoundException',
+        ))
+        self.assertIsInstance(r, tuple)
+        self.assertEqual(len(r), 2)
+        self.assertEqual(r[0], 'fault')
+        self.assertEqual(r[1],
+                         b'fhS\x00\x04codeS\x00\x10ServiceException'
+                         b'S\x00\x07messageS\x00\x0eFile Not Found'
+                         b'S\x00\x06detailS\x00\x1djava.io.FileNotFoundException'
+                         b'z')
 
 class ProtocolProviderTestCase(TracRpcTestCase):
     def setUp(self):
@@ -44,8 +75,9 @@ class ProtocolProviderTestCase(TracRpcTestCase):
 
 
 def test_suite():
-    suite = TracRpcTestSuite()
+    suite = TracRpcProtocolTestSuite()
     suite.addTest(makeSuite(ProtocolProviderTestCase))
+    suite.addTest(makeSuite(HessianEncoderTestCase))
     return suite
 
 

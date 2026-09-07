@@ -25,15 +25,15 @@ License: Apache License 2.0
 
 __all__ = ()
 
-from tracrpc.tests import TracRpcTestSuite
+from ..util import TracRpcProtocolTestSuite
 
 
 def test_suite():
-    suite = TracRpcTestSuite()
+    suite = TracRpcProtocolTestSuite()
     # Hessian test suite
-    from . import api #, ticket, wiki, web_ui, search
-    for mod in (api,
-#               ticket, wiki, web_ui, search
+    from . import api, ticket #, wiki, web_ui, search
+    for mod in (api, ticket,
+#               wiki, web_ui, search
     ):
       suite.addTest(mod.test_suite())
     return suite

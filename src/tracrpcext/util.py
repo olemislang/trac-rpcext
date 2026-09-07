@@ -46,11 +46,11 @@ def timestamp_label():
 
   Currently formed by joining current date and time plus native thread ID.
   '''
-  return ':'.join(
+  return ':'.join([
     format_datetime(format='medium').translate(
       str.maketrans('', '', ':-T')
     ),
-    get_thread_id()
-  )
+    str(get_thread_id())
+  ])
 
 
