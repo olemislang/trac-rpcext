@@ -40,8 +40,25 @@ class HessianEncoderTestCase(unittest.TestCase):
         del self.encoder
 
     def test_encoder_setup(self):
+        self.assertIn(Fault, encoder.RETURN_TYPES)
         self.assertIn(protocol.Fault, encoder.RETURN_TYPES)
         self.assertIn(protocol.Reply, encoder.RETURN_TYPES)
+
+    def test_encode_reply_v1(self):
+        # Ref : http://hessian.caucho.com/doc/hessian-1.0-spec.xtp#Value
+        r = self.encoder._encode(protocol.Reply(5, version=1))
+        self.assertIsInstance(r, tuple)
+        self.assertEqual(len(r), 2)
+        self.assertEqual(r[0], 'reply')
+        self.assertEqual(r[1], b'r\x01\x00I\x00\x00\x00\x05z')
+
+    def test_encode_reply_v2(self):
+        # Ref : http://hessian.caucho.com/doc/hessian-ws.html#anchor15
+        r = self.encoder._encode(protocol.Reply(5, version=2))
+        self.assertIsInstance(r, tuple)
+        self.assertEqual(len(r), 2)
+        self.assertEqual(r[0], 'reply')
+        self.assertEqual(r[1], b'H\x02\x00RI\x00\x00\x00\x05')
 
     def test_encode_fault_v1(self):
         # Ref : http://hessian.caucho.com/doc/hessian-1.0-spec.xtp#Faults
@@ -58,7 +75,7 @@ class HessianEncoderTestCase(unittest.TestCase):
             detail='java.io.FileNotFoundException',
           ), 'python-hessian.Falut'),
         ):
-          r = self.encoder.encode(f)
+          r = self.encoder._encode(f)
           self.assertIsInstance(r, tuple, msg=msg)
           self.assertEqual(len(r), 2, msg=msg)
           self.assertEqual(r[0], 'fault', msg=msg)
@@ -70,7 +87,7 @@ class HessianEncoderTestCase(unittest.TestCase):
 
     def test_encode_fault_v2(self):
         # Ref : http://hessian.caucho.com/doc/hessian-ws.html#anchor16
-        r = self.encoder.encode(Fault(
+        r = self.encoder._encode(Fault(
             code='ServiceException',
             message='File Not Found',
             detail='java.io.FileNotFoundException',
