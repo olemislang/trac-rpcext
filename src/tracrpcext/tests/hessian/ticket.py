@@ -38,6 +38,7 @@ from tracrpcext._hessian import HessianProtocol
 from ..util import TracRpcProtocolTestSuite
 
 from pyhessian.client import HessianProxy
+from pyhessian.protocol import Fault
 
 class HessianTicketTestCase(TracRpcTestCase):
   def setUp(self):
@@ -65,9 +66,16 @@ class HessianTicketTestCase(TracRpcTestCase):
       self.admin, 'ticket.delete'
     )(tid)
     # Check that ticket no longer exists
-    reply = getattr(
-      self.admin, 'ticket.get'
-    )(tid)
+    try:
+      reply = getattr(
+        self.admin, 'ticket.get'
+      )(tid)
+    except Fault as e:
+        self.assertEqual('NoSuchObjectException', e.code)
+        self.assertEqual('Ticket 1 does not exist.', e.message)
+        self.assertRegex(r'RPC\(hessian\) reference : \d+:\d+', e.detail)
+    else:
+        self.fail('Unexpected success')
 
 
 def test_suite():
