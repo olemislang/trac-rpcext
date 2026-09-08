@@ -123,6 +123,13 @@ class PyHessianTicketTestCase(PyHessianTestCase):
         ' admin',
         ' <span class="trac-author-user">admin</span>'
       )
+
+    # Hessian client returns tuples instead of list
+    def tuplify(l):
+        return tuple(tuplify(x) if isinstance(x, list) else x
+                     for x in l
+        )
+    default = tuplify(default)
     self.assertEqual(actions, default)
 
   _delete_ticket_action_controller = RpcTicketTestCase._delete_ticket_action_controller
