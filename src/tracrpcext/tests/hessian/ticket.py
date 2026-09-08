@@ -63,7 +63,7 @@ class PyHessianTicketTestCase(PyHessianTestCase):
     except Fault as e:
       self.assertFaultMatches(e,
         'NoSuchObjectException',
-        'Ticket 1 does not exist.',
+        f'Ticket {tid} does not exist.',
         r'RPC\(hessian\) reference : \d+:\d+'
       )
     else:
@@ -151,6 +151,83 @@ class PyHessianTicketTestCase(PyHessianTestCase):
       env.config.set('ticket', 'workflow', 'ConfigurableTicketWorkflow')
       env.config.save()
       self.assertEqual(0, getattr(self.admin, 'ticket.delete')(tid))
+
+  def test_FineGrainedSecurity(self):
+    tid1 = getattr(self.admin, 'ticket.create')('abc', '123', {})
+    tid2 = getattr(self.admin, 'ticket.create')('def', '456', {})
+    self.assertEqual(tid2, tid1 + 1)
+    # First some non-restricted tests for comparison:
+    self.assertRaises(
+      Fault,
+      getattr(self.anon, 'ticket.create'),
+      'abc', 'def'
+    )
+    self.assertEqual(
+      (tid1, tid2),
+      getattr(self.user, 'ticket.query')()
+    )
+    self.assertTrue(getattr(self.user, 'ticket.get')(tid2))
+    self.assertTrue(getattr(self.user, 'ticket.update')(tid1, "ok"))
+    self.assertTrue(getattr(self.user, 'ticket.update')(tid2, "ok"))
+    # Enable security policy and test
+    source = rf"""# -*- coding: utf-8 -*-
+from trac.core import Component, implements
+from trac.perm import IPermissionPolicy
+class TicketPolicy(Component):
+    implements(IPermissionPolicy)
+    def check_permission(self, action, username, resource, perm):
+        if username == 'user' and resource and resource.id == {tid2}:
+            return False
+        if username == 'anonymous' and action == 'TICKET_CREATE':
+            return True
+"""
+    env = self._testenv.get_trac_environment()
+    _old_conf = env.config.get('trac', 'permission_policies')
+    env.config.set('trac', 'permission_policies',
+                       'TicketPolicy,' + _old_conf)
+    env.config.save()
+    try:
+      with self._plugin(source, 'TicketPolicy.py'):
+        self._testenv.restart()
+        self.assertEqual(
+          (tid1,),
+          getattr(self.user, 'ticket.query')()
+        )
+        self.assertTrue(getattr(self.user, 'ticket.get')(tid1))
+        self.assertRaises(
+          Fault,
+          getattr(self.user, 'ticket.get'),
+          tid2
+        )
+        self.assertTrue(getattr(self.user, 'ticket.update')(tid1, "ok"))
+        self.assertRaises(
+          Fault,
+          getattr(self.user, 'ticket.update'),
+          tid2, "not ok"
+        )
+        tid3 = getattr(self.anon, 'ticket.create')('efg', '789', {})
+        self.assertEqual(tid3, tid2 + 1)
+    finally:
+      # Clean, reset and simple verification
+      env.config.set('trac', 'permission_policies', _old_conf)
+      env.config.save()
+
+    self.assertEqual(
+      (tid1, tid2, tid3),
+      getattr(self.user, 'ticket.query')()
+    )
+    self.assertEqual(
+      0,
+      getattr(self.admin, 'ticket.delete')(tid1)
+    )
+    self.assertEqual(
+      0,
+      getattr(self.admin, 'ticket.delete')(tid2)
+    )
+    self.assertEqual(
+      0,
+      getattr(self.admin, 'ticket.delete')(tid3)
+    )
 
 
 def test_suite():
