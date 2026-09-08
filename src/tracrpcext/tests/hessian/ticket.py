@@ -30,27 +30,16 @@ import unittest
 from trac.util.datefmt import to_datetime, to_utimestamp, utc
 
 from tracrpc.util import unicode, xmlrpclib
-from tracrpc.tests import (Request, b64encode, urlopen, makeSuite,
-                           TracRpcTestCase)
+from tracrpc.tests import Request, b64encode, urlopen, makeSuite
 
 from tracrpcext._hessian import HessianProtocol
 
 from ..util import TracRpcProtocolTestSuite
+from . import PyHessianTestCase
 
-from pyhessian.client import HessianProxy
 from pyhessian.protocol import Fault
 
-class HessianTicketTestCase(TracRpcTestCase):
-  def setUp(self):
-    TracRpcTestCase.setUp(self)
-    self.anon = HessianProxy(self._testenv.url_anon)
-    self.user = HessianProxy(self._testenv.url_user)
-    self.admin = HessianProxy(self._testenv.url_admin)
-
-  def tearDown(self):
-    self.anon = self.user = self.admin = None
-    TracRpcTestCase.tearDown(self)
-
+class PyHessianTicketTestCase(PyHessianTestCase):
   def test_create_get_delete(self):
     tid = getattr(
       self.admin, 'ticket.create'
@@ -71,16 +60,28 @@ class HessianTicketTestCase(TracRpcTestCase):
         self.admin, 'ticket.get'
       )(tid)
     except Fault as e:
-        self.assertEqual('NoSuchObjectException', e.code)
-        self.assertEqual('Ticket 1 does not exist.', e.message)
-        self.assertRegex(r'RPC\(hessian\) reference : \d+:\d+', e.detail)
+      self.assertFaultMatches(e,
+        'NoSuchObjectException',
+        'Ticket 1 does not exist.',
+        r'RPC\(hessian\) reference : \d+:\d+'
+      )
     else:
-        self.fail('Unexpected success')
+      self.fail('Unexpected success')
+
+  def test_create_empty_summary(self):
+    try:
+      getattr(self.admin, 'ticket.create')(
+        "", "the description", {}
+      )
+    except Fault as e:
+      self.assertIn("Tickets must contain a summary.", unicode(e))
+    else:
+      self.fail("Exception not raised creating ticket with empty summary")
 
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
-  suite.addTest(makeSuite(HessianTicketTestCase))
+  suite.addTest(makeSuite(PyHessianTicketTestCase))
   return suite
 
 
