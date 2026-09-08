@@ -477,6 +477,27 @@ class TicketPolicy(Component):
     finally:
       getattr(self.admin, 'ticket.delete')(tid)
 
+  def test_update_time_same(self):
+    # Unrestricted old-style update (to be removed soon)
+    tid = getattr(self.admin, 'ticket.create')(
+      'test_update_time_same', '...', {}
+    )
+    try:
+      tid, created, modified, attrs = getattr(self.admin, 'ticket.get')(tid)
+      ts = attrs['_ts']
+      getattr(self.admin, 'ticket.update')(tid, "comment1",
+                      {'_ts': ts})
+      getattr(self.admin, 'ticket.delete')(tid)
+
+      # Update with 'action' to test new-style update.
+      tid = getattr(self.admin, 'ticket.create')('test_update_time_same', '...', {})
+      tid, created, modified, attrs = getattr(self.admin, 'ticket.get')(tid)
+      ts = attrs['_ts']
+      getattr(self.admin, 'ticket.update')(tid, "comment1",
+                      {'_ts': ts, 'action': 'leave'})
+    finally:
+      getattr(self.admin, 'ticket.delete')(tid)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
