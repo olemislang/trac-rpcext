@@ -31,6 +31,7 @@ from trac.util.datefmt import to_datetime, to_utimestamp, utc
 
 from tracrpc.util import unicode, xmlrpclib
 from tracrpc.tests import Request, b64encode, urlopen, makeSuite
+from tracrpc.tests.ticket import RpcTicketTestCase
 
 from tracrpcext._hessian import HessianProtocol
 
@@ -123,6 +124,33 @@ class PyHessianTicketTestCase(PyHessianTestCase):
         ' <span class="trac-author-user">admin</span>'
       )
     self.assertEqual(actions, default)
+
+  _delete_ticket_action_controller = RpcTicketTestCase._delete_ticket_action_controller
+
+  def test_getAvailableActions_DeleteTicket(self):
+    # Based on http://trac-hacks.org/ticket/5387
+    #tktapi = self.admin.ticket
+    env = self._testenv.get_trac_environment()
+    tid = getattr(self.admin, 'ticket.create')('abc', 'def', {})
+    try:
+      self.assertNotIn(
+        'delete',
+        getattr(self.admin, 'ticket.getAvailableActions')(tid)
+      )
+      env.config.set('ticket', 'workflow',
+        'ConfigurableTicketWorkflow,DeleteTicketActionController'
+      )
+      env.config.save()
+      with self._plugin(self._delete_ticket_action_controller,
+                        'DeleteTicket.py'):
+        self.assertIn(
+          'delete',
+          getattr(self.admin, 'ticket.getAvailableActions')(tid)
+        )
+    finally:
+      env.config.set('ticket', 'workflow', 'ConfigurableTicketWorkflow')
+      env.config.save()
+      self.assertEqual(0, getattr(self.admin, 'ticket.delete')(tid))
 
 
 def test_suite():
