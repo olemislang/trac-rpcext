@@ -34,6 +34,7 @@ from types import GeneratorType
 from trac.core import Component, implements, TracError
 from trac.perm import PermissionError
 from trac.resource import ResourceNotFound
+from trac.util.datefmt import to_datetime, utc
 from trac.util.text import to_unicode
 from trac.web.api import HTTPBadRequest 
 
@@ -148,6 +149,25 @@ class HessianRpcEncoder(object):
     encode_call = encoder.Encoder.__dict__['encode_call']
 
 
+class ParserV1(parser.ParserV1):
+    def _read_date(self):
+        t = super(ParserV1, self)._read_date()
+        return to_datetime(t, utc)
+
+class ParserV2(parser.ParserV2):
+    def _read_date(self):
+        t = super(ParserV1, self)._read_date()
+        return to_datetime(t, utc)
+
+
+class Parser(parser.Parser):
+    def __init__(self):
+        self._version_adapters = {
+            1: ParserV1,
+            2: ParserV2,
+        }
+
+
 # Trac components
 
 __metaclass__ = type
@@ -205,7 +225,7 @@ class HessianProtocol(Component):
                            ' for Content-Length header') 
     else:
       try:
-        call = parser.Parser().parse_string(req.read(clen))
+        call = Parser().parse_string(req.read(clen))
         result = {
           field : getattr(call, field, None)
           for field in ('method', 'headers', 'version')
