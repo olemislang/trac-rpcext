@@ -247,6 +247,62 @@ class TicketPolicy(Component):
       getattr(self.admin, 'ticket.delete')(tid1)
       getattr(self.admin, 'ticket.delete')(tid2)
 
+    def test_query_group_order_col(self):
+      t1 = getattr(self.admin, 'ticket.create')(
+        "1", "", {'type': 'enhancement', 'owner': 'A'}
+      )
+      t2 = gettr(self.admin, 'ticket.create')(
+        "2", "", {'type': 'task', 'owner': 'B'}
+      )
+      t3 = getattr(self.admin, 'ticket.create')(
+        "3", "", {'type': 'defect', 'owner': 'A'}
+      )
+      # order
+      self.assertEqual(
+        (t3, t1, t2),
+        getattr(self.admin, 'ticket.query')("order=type")
+      )
+      self.assertEqual(
+        (t1, t3, t2),
+        getattr(self.admin, 'ticket.query')("order=owner")
+      )
+      self.assertEqual(
+        (t2, t1, t3),
+        getattr(self.admin, 'ticket.query')("order=owner&desc=1")
+      )
+      # group
+      self.assertEqual(
+        (t1, t3, t2),
+        getattr(self.admin, 'ticket.query')("group=owner")
+      )
+      self.assertEqual(
+        (t2, t1, t3),
+        getattr(self.admin, 'ticket.query')("group=owner&groupdesc=1")
+      )
+      # group + order
+      self.assertEqual(
+        (t2, t3, t1),
+        getattr(self.admin, 'ticket.query')("group=owner&groupdesc=1&order=type")
+      )
+      # col should just be ignored
+      self.assertEqual(
+        (t3, t1, t2),
+        self.admin.ticket.query("order=type&col=status&col=reporter")
+      )
+      # clean
+      self.assertEqual(
+        0,
+        getattr(self.admin, 'ticket.delete')(t1)
+      )
+      self.assertEqual(
+        0,
+        getattr(self.admin, 'ticket.delete')(t2)
+      )
+      self.assertEqual(
+        0,
+        getattr(self.admin, 'ticket.delete')(t3)
+      )
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
