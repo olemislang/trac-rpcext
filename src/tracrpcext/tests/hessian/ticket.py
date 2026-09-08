@@ -229,6 +229,24 @@ class TicketPolicy(Component):
       getattr(self.admin, 'ticket.delete')(tid3)
     )
 
+  def test_getRecentChanges(self):
+    tid1 = getattr(self.admin, 'ticket.create')(
+      "ticket_getRecentChanges", "one", {}
+    )
+    time.sleep(1)
+    tid2 = getattr(self.admin, 'ticket.create')(
+      "ticket_getRecentChanges", "two", {}
+    )
+    try:
+      _id, created, modified, attributes = getattr(
+        self.admin, 'ticket.get'
+      )(tid2)
+      changes = getattr(self.admin, 'ticket.getRecentChanges')(created)
+      self.assertEqual(changes, (tid2,))
+    finally:
+      getattr(self.admin, 'ticket.delete')(tid1)
+      getattr(self.admin, 'ticket.delete')(tid2)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
