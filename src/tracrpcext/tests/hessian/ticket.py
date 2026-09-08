@@ -415,6 +415,15 @@ class TicketPolicy(Component):
     self.assertTrue(justnow <= to_datetime(changes[3][0], utc))
     getattr(self.admin, 'ticket.delete')(tid)
 
+  def test_update_non_existing(self):
+    try:
+      getattr(self.admin, 'ticket.update')(3344, "a comment", {})
+    except Exception as e:
+      self.assertIn("Ticket 3344 does not exist.", str(e))
+    else:
+      self.fail("Allowed to update non-existing ticket???")
+      getattr(self.admin, 'ticket.delete')(3344)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
