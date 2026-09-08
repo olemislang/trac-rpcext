@@ -424,6 +424,32 @@ class TicketPolicy(Component):
       self.fail("Allowed to update non-existing ticket???")
       getattr(self.admin, 'ticket.delete')(3344)
 
+  def test_update_basic(self):
+    # Basic update check, no 'action' or 'time_changed'
+    tid = getattr(self.admin, 'ticket.create')(
+      'test_update_basic1', 'ieidnsj', {'owner': 'osimons'}
+    )
+    try:
+      # old-style (deprecated)
+      getattr(self.admin, 'ticket.update')(
+        tid, "comment1", {'component': 'component2'}
+      )
+      self.assertEqual(
+        2,
+        len(getattr(self.admin, 'ticket.changeLog')(tid))
+      )
+      # new-style with 'action'
+      time.sleep(1)  # avoid "columns ticket, time, field are not unique"
+      getattr(self.admin, 'ticket.update')(
+        tid, "comment2", {'component': 'component1', 'action': 'leave'}
+      )
+      self.assertEqual(
+        4,
+        len(getattr(self.admin, 'ticket.changeLog')(tid))
+      )
+    finally:
+      getattr(self.admin, 'ticket.delete')(tid)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
