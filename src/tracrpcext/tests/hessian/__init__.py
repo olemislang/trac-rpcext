@@ -25,7 +25,30 @@ License: Apache License 2.0
 
 __all__ = ()
 
+from tracrpc.tests import TracRpcTestCase 
+
+from pyhessian.client import HessianProxy
+
 from ..util import TracRpcProtocolTestSuite
+
+class PyHessianTestCase(TracRpcTestCase):
+  '''Base class for test cases powered by python-hessian client.
+  '''
+  def setUp(self):
+    TracRpcTestCase.setUp(self)
+    self.anon = HessianProxy(self._testenv.url_anon)
+    self.user = HessianProxy(self._testenv.url_user)
+    self.admin = HessianProxy(self._testenv.url_admin)
+
+  def assertFaultMatches(self, e, expected_code, expected_msg,
+                         expected_detail, msg=None):
+    self.assertEqual(expected_code, e.code, msg=msg)
+    self.assertEqual(expected_msg, e.message, msg=msg)
+    self.assertRegex(e.detail, expected_detail, msg=msg)
+
+  def tearDown(self):
+    self.anon = self.user = self.admin = None
+    TracRpcTestCase.tearDown(self)
 
 
 def test_suite():
