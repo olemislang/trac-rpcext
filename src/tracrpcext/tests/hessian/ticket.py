@@ -333,6 +333,33 @@ class TicketPolicy(Component):
       for tid in tids:
         getattr(self.admin, 'ticket.delete')(tid)
 
+  def test_update_author(self):
+    tid = getattr(self.admin, 'ticket.create')(
+      "ticket_update_author", "one", {}
+    )
+    getattr(self.admin, 'ticket.update')(
+      tid, 'comment1', {}
+    )
+    time.sleep(1)
+    getattr(self.admin, 'ticket.update')(
+      tid, 'comment2', {}, False, 'foo'
+    )
+    time.sleep(1)
+    getattr(self.user, 'ticket.update')(
+      tid, 'comment3', {}, False, 'should_be_rejected'
+    )
+    changes = getattr(self.admin, 'ticket.changeLog')(tid)
+    self.assertEqual(3, len(changes))
+    for when, who, what, cnum, comment, _tid in changes:
+      self.assertIn(comment, ('comment1', 'comment2', 'comment3'))
+      if comment == 'comment1':
+        self.assertEqual('admin', who)
+      if comment == 'comment2':
+        self.assertEqual('foo', who)
+      if comment == 'comment3':
+        self.assertEqual('user', who)
+    getattr(self.admin, 'ticket.delete')(tid)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
