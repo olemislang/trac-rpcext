@@ -367,6 +367,24 @@ class TicketPolicy(Component):
         self.assertEqual('user', who)
     getattr(self.admin, 'ticket.delete')(tid)
 
+  def test_create_at_time(self):
+    now = to_datetime(None, utc)
+    minus1 = now - datetime.timedelta(days=1)
+    # create the tickets (user ticket will not be permitted to change time)
+    one = getattr(self.admin, 'ticket.create')(
+      "create_at_time1", "ok", {}, False, minus1
+    )
+    two = getattr(self.user, 'ticket.create')(
+      "create_at_time3", "ok", {}, False, minus1
+    )
+    # get the tickets
+    t1 = getattr(self.admin, 'ticket.get')(one)
+    t2 = getattr(self.admin, 'ticket.get')(two)
+    # check timestamps
+    self.assertTrue(t1[1] < t2[1])
+    getattr(self.admin, 'ticket.delete')(one)
+    getattr(self.admin, 'ticket.delete')(two)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
