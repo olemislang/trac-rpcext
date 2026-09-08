@@ -450,6 +450,33 @@ class TicketPolicy(Component):
     finally:
       getattr(self.admin, 'ticket.delete')(tid)
 
+  def test_update_time_changed(self):
+    # Update with collision check
+    tid = getattr(self.admin, 'ticket.create')(
+      'test_update_time_changed', '...', {}
+    )
+    try:
+      tid, created, modified, attrs = getattr(self.admin, 'ticket.get')(tid)
+      then = to_datetime(modified, utc) - datetime.timedelta(minutes=1)
+      # Unrestricted old-style update (to be removed soon)
+      try:
+        getattr(self.admin, 'ticket.update')(
+          tid, "comment1", {'_ts': str(to_utimestamp(then))}
+        )
+      except Exception as e:
+        self.assertIn("Ticket has been updated since last get", str(e))
+      # Update with 'action' to test new-style update.
+      try:
+        getattr(self.admin, 'ticket.update')(
+          tid, "comment1", {'_ts': str(to_utimestamp(then)),
+                            'action': 'leave'}
+        ) 
+      except Exception as e:
+        self.assertTrue("Your changes have not been saved" in str(e) or
+                        "modified by someone else" in str(e), str(e))
+    finally:
+      getattr(self.admin, 'ticket.delete')(tid)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
