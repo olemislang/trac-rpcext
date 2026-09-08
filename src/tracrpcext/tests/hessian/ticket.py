@@ -385,6 +385,36 @@ class TicketPolicy(Component):
     getattr(self.admin, 'ticket.delete')(one)
     getattr(self.admin, 'ticket.delete')(two)
 
+  def test_update_at_time(self):
+    now = to_datetime(None, utc)
+    minus1 = now - datetime.timedelta(hours=1)
+    minus2 = now - datetime.timedelta(hours=2)
+    tid = getattr(self.admin, 'ticket.create')(
+      "ticket_update_at_time", "ok", {}
+    )
+    getattr(self.admin, 'ticket.update')(
+      tid, 'one', {}, False, '', minus2
+    )
+    getattr(self.admin, 'ticket.update')(
+      tid, 'two', {}, False, '', minus1
+    )
+    getattr(self.user, 'ticket.update')(
+      tid, 'three', {}, False, '', minus1
+    )
+    time.sleep(1)
+    getattr(self.user, 'ticket.update')(
+      tid, 'four', {}
+    )
+    changes = getattr(self.admin, 'ticket.changeLog')(tid)
+    self.assertEqual(4, len(changes))
+    # quick test to make sure each is older than previous
+    self.assertTrue(changes[0][0] < changes[1][0] < changes[2][0])
+    # margin of 2 seconds for tests
+    justnow = now - datetime.timedelta(seconds=1)
+    self.assertTrue(justnow <= to_datetime(changes[2][0], utc))
+    self.assertTrue(justnow <= to_datetime(changes[3][0], utc))
+    getattr(self.admin, 'ticket.delete')(tid)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
