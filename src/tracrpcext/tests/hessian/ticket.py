@@ -78,6 +78,52 @@ class PyHessianTicketTestCase(PyHessianTestCase):
     else:
       self.fail("Exception not raised creating ticket with empty summary")
 
+  def test_getActions(self):
+    tid = getattr(self.admin, 'ticket.create')(
+      "ticket_getActions", "kjsald", {'owner': ''}
+    )
+    try:
+      actions = getattr(self.admin, 'ticket.getActions')(tid)
+    finally:
+      getattr(self.admin, 'ticket.delete')(tid)
+    default = [['leave', 'leave', '.', []], ['resolve', 'resolve',
+                "The resolution will be set. Next status will be 'closed'.",
+               [['action_resolve_resolve_resolution', 'fixed',
+               ['fixed', 'invalid', 'wontfix', 'duplicate', 'worksforme']]]],
+               ['reassign', 'reassign',
+                "The owner will change from (none). Next status will be 'assigned'.",
+                [['action_reassign_reassign_owner', 'admin', []]]],
+               ['accept', 'accept',
+                "The owner will change from (none) to admin. Next status will be 'accepted'.", []]]
+    # Adjust for trac:changeset:9041
+    if 'will be changed' in actions[2][2]:
+      default[2][2] = default[2][2].replace('will change', 'will be changed')
+      default[3][2] = default[3][2].replace('will change', 'will be changed')
+    # Adjust for trac:changeset:11777
+    if not 'from (none).' in actions[2][2]:
+      default[2][2] = default[2][2].replace(
+        'from (none).',
+        'from (none) to the specified user.'
+      )
+    # Adjust for trac:changeset:11778
+    if actions[0][2] != '.':
+      default[0][2] = 'The ticket will remain with no owner.'
+    # Adjust for trac:changeset:13203 and trac:changeset:14393
+    if '<span class=' in actions[2][2]:
+      default[2][2] = default[2][2].replace(
+        ' (none)',
+        ' <span class="trac-author-none">(none)</span>'
+      )
+      default[3][2] = default[3][2].replace(
+        ' (none)',
+        ' <span class="trac-author-none">(none)</span>'
+      )
+      default[3][2] = default[3][2].replace(
+        ' admin',
+        ' <span class="trac-author-user">admin</span>'
+      )
+    self.assertEqual(actions, default)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
