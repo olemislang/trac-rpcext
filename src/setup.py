@@ -96,15 +96,15 @@ ENTRY_POINTS = r"""
                """
 
 setup(
-	name=DIST_NM,
-	version=latest,
-	description=DESC.split('\n', 1)[0],
-	author='Olemis Lang',
-	author_email='olemis+trac@gmail.com',
-	maintainer='Olemis Lang',
-	maintainer_email='olemis+trac@gmail.com',
-	url='https://opensvn.csie.org/traccgi/swlcu/wiki/En/Devel/%s' % (DIST_NM,),
-  download_url='http://pypi.python.org/packages/2.5/%s/%s/%s-%s-py2.5.egg' % \
+  name=DIST_NM,
+  version=latest,
+  description=DESC.split('\n', 1)[0],
+  author='Olemis Lang',
+  author_email='olemis+trac@gmail.com',
+  maintainer='Olemis Lang',
+  maintainer_email='olemis+trac@gmail.com',
+    url='https://sourceforge.net/p/makercitos/trac-rpcext/',
+    download_url='http://pypi.python.org/packages/2.5/%s/%s/%s-%s-py2.5.egg' % \
                                 (DIST_NM[0], DIST_NM, DIST_NM, latest,),
   install_requires = [
     'setuptools>=0.6b1',
