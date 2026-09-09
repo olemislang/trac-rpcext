@@ -35,6 +35,7 @@ from trac.core import Component, implements, TracError
 from trac.perm import PermissionError
 from trac.resource import ResourceNotFound
 from trac.util.datefmt import to_datetime, utc
+from trac.util.html import Fragment
 from trac.util.text import to_unicode
 from trac.web.api import HTTPBadRequest 
 
@@ -65,6 +66,7 @@ for t, lbl in (
     (protocol.Reply, 'reply'),
     (protocol.Fault, 'fault'),
     (Fault,          'fault'),
+    (Fragment,       'string'),
 ):
     encoder.RETURN_TYPES[t] = lbl
 
@@ -120,7 +122,10 @@ class HessianRpcEncoder(object):
         encoded = b''.join(self.encode_keyval((key, getattr(fault, key)))
                            for key in ('code', 'message', 'detail')) 
         return pack('>cBBcc', b'H', fault.version, 0, b'F', b'H') + encoded + b'Z'
-            
+
+    @encoder.encoder_for(Fragment)
+    def encode_fragment(self, frag):
+        return self.encode(str(frag))
 
     # Copy all methods in encoder.Encoder
     _encode = encoder.Encoder.__dict__['_encode']
