@@ -54,9 +54,9 @@ class PyHessianTestCase(TracRpcTestCase):
 def test_suite():
     suite = TracRpcProtocolTestSuite()
     # Hessian test suite
-    from . import api, ticket #, wiki, web_ui, search
-    for mod in (api, ticket,
-#               wiki, web_ui, search
+    from . import api, ticket, search #, wiki, web_ui
+    for mod in (api, ticket, search,
+#               wiki, web_ui
     ):
       suite.addTest(mod.test_suite())
     return suite
