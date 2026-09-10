@@ -183,7 +183,7 @@ class HessianProtocol(Component):
   dynamically-typed binary RPC protocol. This component adds support for 
   [http://hessian.caucho.com/doc/hessian-1.0-spec.xtp version 1.0] and
   [http://hessian.caucho.com/doc/hessian-ws.html version 2.0]. There are
-  [http://hessian.caucho.com/#HessianImplementationsDownloa dclient implementations]
+  [http://hessian.caucho.com/#HessianImplementationsDownload client implementations]
   available for some popular programming languages.
 
   The following snippet illustrates how to perform authenticated calls 

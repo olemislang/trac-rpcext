@@ -72,13 +72,13 @@ class AMFProtocol(Component):
   >>> from pyamf.remoting import RemotingError
   >>> from pyamf.remoting.client import RemotingService
   >>> username, password = '$authname', 'mypassword'
-  >>> url = '${req.abs_href.login('rpc')}'
+  >>> url = %(url_anon)r
   >>> gw = RemotingService(url)
-  >>> auth = base64.encodestring('%s:%s' % (username, password))[:-1]
-  >>> gw.addHTTPHeader("Authorization", "Basic %s" % auth)
+  >>> auth = base64.encodestring('%%s:%%s' %% (username, password))[:-1]
+  >>> gw.addHTTPHeader("Authorization", "Basic %%s" %% auth)
   >>> service = gw.getService('system')
   >>> print service.getAPIVersion()
-  [${', '.join(rpc.version.split('.'))}]
+  %(version)r
   }}}
 
   Implementation details:
@@ -90,7 +90,7 @@ class AMFProtocol(Component):
   """)
   implements(IRPCProtocol)
 
-  RPC_PROTO = 'AMF'
+  RPC_PROTO = 'Action Message Format'
 
   # IRPCProtocol methods
   def rpc_info(self):
