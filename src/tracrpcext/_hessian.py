@@ -183,7 +183,7 @@ class HessianProtocol(Component):
   dynamically-typed binary RPC protocol. This component adds support for 
   [http://hessian.caucho.com/doc/hessian-1.0-spec.xtp version 1.0] and
   [http://hessian.caucho.com/doc/hessian-ws.html version 2.0]. There are
-  [client implementations](http://hessian.caucho.com/#HessianImplementationsDownload)
+  [http://hessian.caucho.com/#HessianImplementationsDownloa dclient implementations]
   available for some popular programming languages.
 
   The following snippet illustrates how to perform authenticated calls 
@@ -191,10 +191,9 @@ class HessianProtocol(Component):
 
   {{{
   >>> from pyhessian.client import HessianProxy
-  >>> hsp = HessianProxy('${req.abs_href.login('hessian')}', {'username' : '$authname', \
-                                                'password' : 'your_password'})
+  >>> hsp = HessianProxy('%(url_auth)r)
   >>> getattr(hsp, "system.getAPIVersion")()
-  [${', '.join(rpc.version.split('.'))}]
+  %(version)r
   }}}
 
   Implementation details:
@@ -203,11 +202,13 @@ class HessianProtocol(Component):
       header and shall sent to /rpc path relative to the Trac instance base URL.
     * `"id"` is optional, and any marker value received with a
       request is returned with the response.
-    * Fields overload and version of Hessian calls are ignored.
+    * Overload field of Hessian calls is ignored.
+    * Some client libraries (e.g. `python-hessian` proxy) return instances of
+      `tuple` rather than `list`.
   """)
   implements(IRPCProtocol)
 
-  RPC_PROTO = 'hessian'
+  RPC_PROTO = 'Hessian'
 
   # IRPCProtocol methods
   def rpc_info(self):
