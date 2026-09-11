@@ -129,6 +129,29 @@ class PyHessianWikiTestCase(PyHessianTestCase):
     )
     self.assertEqual(markup_2, markup_1)
 
+  def test_getPageHTMLWithManipulator(self):
+    getattr(self.admin, 'wiki.putPage')(
+      'FooBar', 'foo bar', {}
+    )
+    # Enable wiki manipulator
+    source = r"""# -*- coding: utf-8 -*-
+from trac.core import *
+from trac.wiki.api import IWikiPageManipulator
+class WikiManipulator(Component):
+    implements(IWikiPageManipulator)
+    def prepare_wiki_page(self, req, page, fields):
+        fields['text'] = 'foo bar baz'
+    def validate_wiki_page(req, page):
+        return []
+"""
+    with self._plugin(source, 'Manipulator.py'):
+      self.assertEqual(
+        '<html><body><p>\nfoo bar baz\n</p>\n'
+        '</body></html>',
+        getattr(self.admin, 'wiki.getPageHTML')(
+          'FooBar'
+        ))
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
