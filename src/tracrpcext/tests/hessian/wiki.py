@@ -82,6 +82,27 @@ class PyHessianWikiTestCase(PyHessianTestCase):
       getattr(self.admin, 'wiki.listAttachments')('TitleIndex')
     )
 
+  def test_getRecentChanges(self):
+    getattr(self.admin, 'wiki.putPage')(
+      'WikiOne', 'content one', {}
+    )
+    time.sleep(1)
+    getattr(self.admin, 'wiki.putPage')(
+      'WikiTwo', 'content two', {}
+    )
+    attrs2 = getattr(self.admin, 'wiki.getPageInfo')(
+      'WikiTwo'
+    )
+    changes = getattr(self.admin, 'wiki.getRecentChanges')(
+      attrs2['lastModified']
+    )
+    self.assertEqual(1, len(changes))
+    self.assertEqual('WikiTwo', changes[0]['name'])
+    self.assertEqual('admin', changes[0]['author'])
+    self.assertEqual(1, changes[0]['version'])
+    getattr(self.admin, 'wiki.deletePage')('WikiOne')
+    getattr(self.admin, 'wiki.deletePage')('WikiTwo')
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
