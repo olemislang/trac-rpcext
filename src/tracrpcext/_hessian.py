@@ -39,7 +39,7 @@ from trac.util.html import Fragment
 from trac.util.text import to_unicode
 from trac.web.api import HTTPBadRequest 
 
-from tracrpc.api import IRPCProtocol, XMLRPCSystem
+from tracrpc.api import Binary, IRPCProtocol, XMLRPCSystem
 from tracrpc.util import cleandoc_, gettext
 
 from pyhessian import encoder, parser, protocol
@@ -67,9 +67,21 @@ for t, lbl in (
     (protocol.Fault, 'fault'),
     (Fault,          'fault'),
     (Fragment,       'string'),
+    (Binary,         'binary'),
 ):
     encoder.RETURN_TYPES[t] = lbl
 
+
+class HessianRpcBinary(protocol.Binary):
+
+    def __init__(self, value):
+        self.value = value.value \
+                         if isinstance(value, protocol.Binary) else \
+                     value
+
+    @property
+    def data(self):
+        return self.value
 
 @six.add_metaclass(encoder.EncoderBase)
 class HessianRpcEncoder(object):
@@ -127,6 +139,10 @@ class HessianRpcEncoder(object):
     def encode_fragment(self, frag):
         return self.encode(str(frag))
 
+    @encoder.encoder_for(Binary)
+    def encode_tracrpc_binary(self, obj):
+        return self.encode(protocol.Binary(obj.data))
+
     # Copy all methods in encoder.Encoder
     _encode = encoder.Encoder.__dict__['_encode']
     add_ref = encoder.Encoder.__dict__['add_ref']
@@ -159,10 +175,21 @@ class ParserV1(parser.ParserV1):
         t = super(ParserV1, self)._read_date()
         return to_datetime(t, utc)
 
+    def _read_binary(self, len=None):
+        return HessianRpcBinary(
+            super(ParserV1, self)._read_binary(len)
+        )
+
+
 class ParserV2(parser.ParserV2):
     def _read_date(self):
         t = super(ParserV1, self)._read_date()
         return to_datetime(t, utc)
+
+    def _read_binary(self, len=None):
+        return HessianRpcBinary(
+            super(ParserV2, self)._read_binary(len)
+        )
 
 
 class Parser(parser.Parser):
