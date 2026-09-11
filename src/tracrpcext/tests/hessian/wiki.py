@@ -103,6 +103,32 @@ class PyHessianWikiTestCase(PyHessianTestCase):
     getattr(self.admin, 'wiki.deletePage')('WikiOne')
     getattr(self.admin, 'wiki.deletePage')('WikiTwo')
 
+  def test_getPageHTMLWithImage(self):
+    # Create the wiki page (absolute image reference)
+    getattr(self.admin, 'wiki.putPage')(
+      'ImageTest', '[[Image(wiki:ImageTest:feed.png, nolink)]]\n', {}
+    )
+                        
+    # Create attachment
+    getattr(self.admin, 'wiki.putAttachmentEx')(
+      'ImageTest', 'feed.png', 'test image',
+      Binary(self.image_in)
+    )
+    # Check rendering absolute
+    markup_1 = getattr(self.admin, 'wiki.getPageHTML')(
+      'ImageTest'
+    )
+    self.assertIn((' src="%s/raw-attachment/wiki/ImageTest/feed.png"' %
+                       self._testenv.url), markup_1)
+    # Change to relative image reference and check again
+    getattr(self.admin, 'wiki.putPage')(
+      'ImageTest', '[[Image(feed.png, nolink)]]\n', {}
+    )
+    markup_2 = getattr(self.admin, 'wiki.getPageHTML')(
+      'ImageTest'
+    )
+    self.assertEqual(markup_2, markup_1)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
