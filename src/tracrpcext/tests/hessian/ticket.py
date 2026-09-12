@@ -64,7 +64,7 @@ class PyHessianTicketTestCase(PyHessianTestCase):
       self.assertFaultMatches(e,
         'NoSuchObjectException',
         f'Ticket {tid} does not exist.',
-        r'RPC\(hessian\) reference : \d+:\d+'
+        r'RPC\(Hessian\) reference : \d+:\d+'
       )
     else:
       self.fail('Unexpected success')
