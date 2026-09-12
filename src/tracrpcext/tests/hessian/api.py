@@ -30,7 +30,8 @@ from tracrpc.tests import makeSuite, TracRpcTestCase
 from pyhessian import encoder, protocol
 
 from tracrpcext._hessian import Fault, HessianRpcEncoder, HessianProtocol
-from tracrpcext.tests.util import TracRpcProtocolTestSuite
+from ..util import TracRpcProtocolTestSuite
+from . import PyHessianTestCase
 
 class HessianEncoderTestCase(unittest.TestCase):
     def setUp(self):
@@ -117,10 +118,34 @@ class ProtocolProviderTestCase(TracRpcTestCase):
         self.assertIn('Content-Type: application/x-hessian', docs)
 
 
+class PyHessianApiTestCase(PyHessianTestCase):
+
+  def test_multicall(self):
+    params = [
+      {'methodName': 'wiki.getAllPages', 'params': [], 'id': 1},
+      {'methodName': 'wiki.getPage', 'params': ['WikiStart', 1], 'id': 2},
+      {'methodName': 'ticket.status.getAll', 'params': [], 'id': 3},
+      {'methodName': 'nonexisting', 'params': []}
+    ]
+    result = getattr(self.user, 'system.multicall')(params)
+    self.assertEqual(4, len(result))
+    self.assertEqual(1, result[0]['id'])
+    self.assertEqual(2, result[1]['id'])
+    self.assertEqual(3, result[2]['id'])
+    self.assertEqual(None, result[0]['error'])
+    self.assertIn('WikiStart', result[0]['result'])
+    self.assertIn('Welcome', result[1]['result'])
+    self.assertEqual(['accepted', 'assigned', 'closed', 'new',
+                                'reopened'], result[2]['result'])
+    self.assertEqual(None, result[3]['result'])
+    self.assertEqual('JSONRPCError', result[3]['error']['name'])
+
+
 def test_suite():
     suite = TracRpcProtocolTestSuite()
     suite.addTest(makeSuite(ProtocolProviderTestCase))
     suite.addTest(makeSuite(HessianEncoderTestCase))
+    suite.addTest(makeSuite(PyHessianApiTestCase))
     return suite
 
 
