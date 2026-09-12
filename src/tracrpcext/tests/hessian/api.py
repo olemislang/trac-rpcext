@@ -114,7 +114,7 @@ class ProtocolProviderTestCase(TracRpcTestCase):
         # Just try getting the docs for Hessian to test, it should always exist
         hessian = HessianProtocol(self._testenv.get_trac_environment())
         name, docs = hessian.rpc_info()
-        self.assertEqual(name, 'hessian')
+        self.assertEqual(name, 'Hessian')
         self.assertIn('Content-Type: application/x-hessian', docs)
 
 
