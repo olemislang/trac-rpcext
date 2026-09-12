@@ -59,7 +59,7 @@ class HessianEncoderTestCase(unittest.TestCase):
         self.assertIsInstance(r, tuple)
         self.assertEqual(len(r), 2)
         self.assertEqual(r[0], 'reply')
-        self.assertEqual(r[1], b'H\x02\x00RI\x00\x00\x00\x05')
+        self.assertEqual(r[1], b'RI\x00\x00\x00\x05')
 
     def test_encode_fault_v1(self):
         # Ref : http://hessian.caucho.com/doc/hessian-1.0-spec.xtp#Faults
@@ -98,7 +98,7 @@ class HessianEncoderTestCase(unittest.TestCase):
         self.assertEqual(len(r), 2)
         self.assertEqual(r[0], 'fault')
         self.assertEqual(r[1],
-                         b'H\x02\x00FHS\x00\x04codeS\x00\x10ServiceException'
+                         b'FHS\x00\x04codeS\x00\x10ServiceException'
                          b'S\x00\x07messageS\x00\x0eFile Not Found'
                          b'S\x00\x06detailS\x00\x1djava.io.FileNotFoundException'
                          b'Z')
