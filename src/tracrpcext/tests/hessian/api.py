@@ -151,6 +151,26 @@ class PyHessianApiTestCase(PyHessianTestCase):
 
 RPC\(Hessian\) reference : \d+:\d+''')
 
+  def test_large_file(self):
+    pagename = 'SandBox/LargeJsonrpc'
+    filename = 'large.dat'
+    rv = getattr(self.admin, 'wiki.putPage')(
+      pagename, 'attachment:' + filename, {}
+    )
+    self.assertEqual(True, rv)
+
+    content = bytes(bytearray(range(256))) * 4 * 1024 * 4  # 4 MB
+    rv = getattr(self.admin, 'wiki.putAttachmentEx')(
+      pagename, filename, 'Large file', protocol.Binary(content)
+    )
+    self.assertEqual(filename, rv)
+
+    rv = getattr(self.admin, 'wiki.getAttachment')(
+      '%s/%s' % (pagename, filename)
+    )
+    self.assertIsInstance(rv, protocol.Binary)
+    self.assertEqual(content, rv.value)
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
