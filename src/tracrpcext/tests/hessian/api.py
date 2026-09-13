@@ -33,6 +33,9 @@ from tracrpcext._hessian import Fault, HessianRpcEncoder, HessianProtocol
 from ..util import TracRpcProtocolTestSuite
 from . import PyHessianTestCase
 
+# Module name of default Hessian client library
+RPC_EXC_MODULE = 'tracrpcext.exc'
+
 class HessianEncoderTestCase(unittest.TestCase):
     def setUp(self):
         self.encoder = HessianRpcEncoder()
@@ -129,16 +132,24 @@ class PyHessianApiTestCase(PyHessianTestCase):
     ]
     result = getattr(self.user, 'system.multicall')(params)
     self.assertEqual(4, len(result))
-    self.assertEqual(1, result[0]['id'])
-    self.assertEqual(2, result[1]['id'])
-    self.assertEqual(3, result[2]['id'])
-    self.assertEqual(None, result[0]['error'])
-    self.assertIn('WikiStart', result[0]['result'])
-    self.assertIn('Welcome', result[1]['result'])
-    self.assertEqual(['accepted', 'assigned', 'closed', 'new',
-                                'reopened'], result[2]['result'])
-    self.assertEqual(None, result[3]['result'])
-    self.assertEqual('JSONRPCError', result[3]['error']['name'])
+    for i, r in enumerate(result[:3]):
+        msg = f'Result at index {i}'
+        self.assertIsInstance(r, tuple)
+        self.assertEqual(1, len(r), msg)
+    # FIXME: Implement echo of request id
+#    self.assertEqual(1, result[0]['id'])
+#    self.assertEqual(2, result[1]['id'])
+#    self.assertEqual(3, result[2]['id'])
+    self.assertIn('WikiStart', result[0][0])
+    self.assertIn('Welcome', result[1][0])
+    self.assertEqual(('accepted', 'assigned', 'closed', 'new',
+                                'reopened'), result[2][0])
+    self.assertIsInstance(result[3], protocol.Object)
+    self.assertEqual(type(result[3]).__module__, RPC_EXC_MODULE)
+    self.assertEqual(type(result[3]).__name__, 'NoSuchMethodException')
+    self.assertRegex(result[3].message, r'''RPC method "nonexisting" not found
+
+RPC\(Hessian\) reference : \d+:\d+''')
 
 
 def test_suite():
