@@ -39,7 +39,7 @@ class ProtocolProviderTestCase(TracRpcTestCase):
         # Just try getting the docs for AMF to test, it should always exist
         amf = AMFProtocol(self._testenv.get_trac_environment())
         name, docs = amf.rpc_info()
-        self.assertEqual(name, 'AMF')
+        self.assertEqual(name, 'Action Message Format')
         self.assertIn('Content-Type: application/x-amf', docs)
 
 
