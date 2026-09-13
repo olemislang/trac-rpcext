@@ -273,9 +273,9 @@ class ParserV2(parser.ParserV2):
         t = super(ParserV1, self)._read_date()
         return to_datetime(t, utc)
 
-    def _read_binary(self, len=None):
+    def _read_binary(self, code, len=None):
         return HessianRpcBinary(
-            super(ParserV2, self)._read_binary(len)
+            super(ParserV2, self)._read_binary(code, len)
         )
 
 
@@ -285,6 +285,13 @@ class Parser(parser.Parser):
             1: ParserV1,
             2: ParserV2,
         }
+
+    def read_object(self, code=None):
+        obj = super(Parser, self).read_object(code)
+        # Wrapper for binary values
+        if isinstance(obj, protocol.Binary):
+            return HessianRpcBinary(obj)
+        return obj
 
 
 # Trac components
