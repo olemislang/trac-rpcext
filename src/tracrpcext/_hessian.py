@@ -319,13 +319,27 @@ class HessianProtocol(Component):
 
   Implementation details:
 
-    * Hessian calls must include Content-Type: application/x-hessian
-      header and shall sent to /rpc path relative to the Trac instance base URL.
-    * `"id"` is optional, and any marker value received with a
-      request is returned with the response.
-    * Overload field of Hessian calls is ignored.
-    * Some client libraries (e.g. `python-hessian` proxy) return instances of
-      `tuple` rather than `list`.
+    * Hessian calls must include `Content-Type: application/x-hessian`
+      header.
+    * Anonymous calls shall be sent to `/rpc` path
+      relative to the Trac instance base URL.
+    * Authenticated calls shall be sent to `/login/rpc` path
+      relative to the Trac instance base URL.
+    * RPC request`"id"` marks are not supported yet.
+    * Field `overload` of Hessian calls is ignored.
+    * Some client libraries (e.g. `python-hessian` proxy)
+      return instances of `tuple` rather than `list`.
+    * Multiple RPC methods may be executed at once by
+      invoking `system.multicall` endpoint, and in that case
+      - outcomes are returned in the same order as requested,
+      - the result of a successful method call is returned back
+        wrapped in an unary `tuple`,
+      - faults are sent back encoded as
+        [http://hessian.caucho.com/doc/hessian-serialization.html##map object maps]
+        with `type` set to one of
+        [http://hessian.caucho.com/doc/hessian-ws.html#anchor16 Hessian fault codes].
+        Client libraries are responsible for choosing the concrete class type for
+        object instantiation.
   """)
   implements(IRPCProtocol)
 
