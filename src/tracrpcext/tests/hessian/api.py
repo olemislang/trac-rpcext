@@ -171,6 +171,23 @@ RPC\(Hessian\) reference : \d+:\d+''')
     self.assertIsInstance(rv, protocol.Binary)
     self.assertEqual(content, rv.value)
 
+  def test_fragment(self):
+    tktid = getattr(self.admin, 'ticket.create')(
+      'ticket10786', '', {'type': 'enhancement', 'owner': 'A'}
+    )
+    try:
+      result = getattr(self.admin, 'search.performSearch')(
+        'ticket10786'
+      )
+      self.assertEqual(
+        '<span class="new">#%d</span>: enhancement: '
+          'ticket10786 (new)' % tktid,
+        result[0][1]
+      )
+      self.assertEqual(1, len(result))
+    finally:
+        getattr(self.admin, 'ticket.delete')(tktid)
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
