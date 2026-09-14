@@ -23,6 +23,7 @@ License: Apache License 2.0
 (c) 2026 ::: Olemis Lang <olemis at gmail.com>
 """
 
+import sys
 import unittest
 
 from tracrpc.tests import makeSuite, TracRpcTestCase
@@ -213,6 +214,20 @@ RPC\(Hessian\) reference : \d+:\d+''')
       )
     else:
       self.fail('Hessian fault not raised')
+
+  def test_wrong_argspec(self):
+    try:
+      getattr(self.admin, 'system.listMethods')("hello")
+    except protocol.Fault as e:
+      self.assertFaultMatches(
+        e, 'ServiceException',
+        'listMethods() takes exactly 2 arguments' 
+          if sys.version_info[0] == 2 else
+        'listMethods() takes 2 positional arguments but 3 were given',
+        r'RPC\(Hessian\) reference : \d+:\d+',
+      )
+    else:
+      self.fail('xmlrpclib.Fault not raised')
 
 
 def test_suite():
