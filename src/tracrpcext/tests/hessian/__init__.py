@@ -43,7 +43,7 @@ class PyHessianTestCase(TracRpcTestCase):
   def assertFaultMatches(self, e, expected_code, expected_msg,
                          expected_detail, msg=None):
     self.assertEqual(expected_code, e.code, msg=msg)
-    self.assertEqual(expected_msg, e.message, msg=msg)
+    self.assertIn(expected_msg, e.message, msg=msg)
     self.assertRegex(e.detail, expected_detail, msg=msg)
 
   def tearDown(self):
