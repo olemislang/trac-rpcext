@@ -202,6 +202,18 @@ RPC\(Hessian\) reference : \d+:\d+''')
     finally:
       self._grant_perm('anonymous', 'XML_RPC')
 
+  def test_method_not_found(self):
+    try:
+      getattr(self.admin, 'system.doesNotExist')()
+    except protocol.Fault as e:
+      self.assertFaultMatches(
+        e, 'NoSuchMethodException',
+        'RPC method "system.doesNotExist" not found',
+        r'RPC\(Hessian\) reference : \d+:\d+'
+      )
+    else:
+      self.fail('Hessian fault not raised')
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
