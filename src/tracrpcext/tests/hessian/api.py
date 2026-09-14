@@ -188,6 +188,20 @@ RPC\(Hessian\) reference : \d+:\d+''')
     finally:
         getattr(self.admin, 'ticket.delete')(tktid)
 
+  def test_xmlrpc_permission(self):
+    # Test returned response if not XML_RPC permission
+    self._revoke_perm('anonymous', 'XML_RPC')
+    try:
+      getattr(self.anon, 'system.listMethods')()
+    except protocol.Fault as e:
+      self.assertEqual('RequireHeaderException', e.code)
+      self.assertIn('XML_RPC', e.message)
+      self.assertRegex(e.detail, r'RPC\(Hessian\) reference : \d+:\d+')
+    else:
+      self.fail('Hessian fault not raised')
+    finally:
+      self._grant_perm('anonymous', 'XML_RPC')
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
