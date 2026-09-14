@@ -229,6 +229,32 @@ RPC\(Hessian\) reference : \d+:\d+''')
     else:
       self.fail('xmlrpclib.Fault not raised')
 
+  def test_resource_not_found(self):
+    # A Ticket resource
+    try:
+      getattr(self.admin, 'ticket.get')(2147483647)
+    except protocol.Fault as e:
+      self.assertFaultMatches(
+        e, 'NoSuchObjectException',
+        'Ticket 2147483647 does not exist.',
+        r'RPC\(Hessian\) reference : \d+:\d+',
+      )
+    else:
+      self.fail('Hessian fault not raised')
+    # A Wiki resource
+    try:
+      getattr(self.admin, 'wiki.getPage')(
+        "Test", 10
+      )
+    except protocol.Fault as e:
+      self.assertFaultMatches(
+        e, 'NoSuchObjectException',
+        'Wiki page "Test" does not exist at version 10',
+        r'RPC\(Hessian\) reference : \d+:\d+',
+      )
+    else:
+      self.fail('Hessian fault not raised')
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
