@@ -50,6 +50,35 @@ class ProtocolProviderTestCase(TracRpcTestCase):
 
 class Py3AMFApiTestCase(Py3AMFTestCase):
 
+  def test_multicall(self):
+    params = [
+      {'methodName': 'wiki.getAllPages', 'params': [], 'id': 1},
+      {'methodName': 'wiki.getPage', 'params': ['WikiStart', 1], 'id': 2},
+      {'methodName': 'ticket.status.getAll', 'params': [], 'id': 3},
+      {'methodName': 'nonexisting', 'params': []}
+    ]
+    rpc_sys = self.user.getService('system')
+    result = rpc_sys.multicall(params)
+    self.assertEqual(4, len(result))
+    for i, r in enumerate(result[:3]):
+        msg = f'Result at index {i}'
+        self.assertIsInstance(r, list, msg)
+        self.assertEqual(1, len(r), msg)
+    # FIXME: Implement echo of request id
+#    self.assertEqual(1, result[0]['id'])
+#    self.assertEqual(2, result[1]['id'])
+#    self.assertEqual(3, result[2]['id'])
+    self.assertIn('WikiStart', result[0][0])
+    self.assertIn('Welcome', result[1][0])
+    self.assertEqual(['accepted', 'assigned', 'closed', 'new',
+                      'reopened'
+                    ], result[2][0])
+    self.assertIsInstance(result[3], dict)
+    self.assertEqual('Trac Error', result[3]['title'])
+    self.assertEqual('MethodNotFound', result[3]['name'])
+    self.assertRegex('RPC method "nonexisting" not found',
+                     result[3].message)
+
   def test_xmlrpc_permission(self):
     # Test returned response if not XML_RPC permission
     self._revoke_perm('anonymous', 'XML_RPC')
