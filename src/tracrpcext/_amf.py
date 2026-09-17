@@ -77,7 +77,7 @@ class Amf0ReqProcessor(amf0.RequestProcessor):
     return self.buildErrorResponse(amf_msg, error)
 
   def build_resp_from_ctx(self, ctx, value):
-    response = remoting.Response(value)
+    return remoting.Response(value)
 
 
 class Amf3ReqProcessor(amf3.RequestProcessor):
@@ -231,17 +231,16 @@ class AMFProtocol(Component):
         (s['id'],
          self._build_result_msg(s, r)
             if is_ok else
-         self.build_error_from_ctx(s, r)
+         self._build_error_msg(s, r)
         ) for s, (is_ok, r) in zip(sigs, values)
       )
-                  
     else:
       # Real multicall
       amf_msgs = [(rpcreq['id'],
                    self._build_result_msg(rpcreq, result)
                    )]
 
-    response = remoting.Envelope(request.amfVersion, request.clientType)
+    response = remoting.Envelope(request.amfVersion)
     for req_id, amf_msg in amf_msgs:
       response[req_id] = amf_msg
 
@@ -322,6 +321,10 @@ class AMFProtocol(Component):
   def _build_result_msg(self, rpcreq, result):
     amf_proc = rpcreq['amf.handler']
     return amf_proc.build_resp_from_ctx(rpcreq, result)
+
+  def _build_error_msg(self, rpcreq, result):
+    amf_proc = rpcreq['amf.handler']
+    return amf_proc.build_error_from_ctx(rpcreq, result)
 
   def _send_amf_response(self, req, rpcreq, amf_resp):
     try:
