@@ -135,7 +135,7 @@ class PyHessianApiTestCase(PyHessianTestCase):
     self.assertEqual(4, len(result))
     for i, r in enumerate(result[:3]):
         msg = f'Result at index {i}'
-        self.assertIsInstance(r, tuple)
+        self.assertIsInstance(r, tuple, msg)
         self.assertEqual(1, len(r), msg)
     # FIXME: Implement echo of request id
 #    self.assertEqual(1, result[0]['id'])
@@ -144,7 +144,9 @@ class PyHessianApiTestCase(PyHessianTestCase):
     self.assertIn('WikiStart', result[0][0])
     self.assertIn('Welcome', result[1][0])
     self.assertEqual(('accepted', 'assigned', 'closed', 'new',
-                                'reopened'), result[2][0])
+                      'reopened'
+                     ), result[2][0])
+                     
     self.assertIsInstance(result[3], protocol.Object)
     self.assertEqual(type(result[3]).__module__, RPC_EXC_MODULE)
     self.assertEqual(type(result[3]).__name__, 'NoSuchMethodException')
