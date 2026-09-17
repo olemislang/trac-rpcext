@@ -25,7 +25,30 @@ License: Apache License 2.0
 
 __all__ = ()
 
-from tracrpc.tests import TracRpcTestSuite
+from pyamf.remoting import client
+
+from tracrpc.tests import TracRpcTestCase, TracRpcTestSuite
+
+class Py3AMFTestCase(TracRpcTestCase):
+  '''Base class for test cases powered by python-hessian client.
+  '''
+  def setUp(self):
+    TracRpcTestCase.setUp(self)
+    self.anon = client.RemotingService(self._testenv.url_anon)
+    self.user = client.RemotingService(self._testenv.url_anon)
+    self.user.setCredentials('user', 'user')
+    self.admin = client.RemotingService(self._testenv.url_anon)
+    self.admin.setCredentials('admin', 'admin')
+
+  def assertFaultMatches(self, e, expected_code, expected_msg,
+                         expected_detail, msg=None):
+    self.assertEqual(expected_code, e.code, msg=msg)
+    self.assertIn(expected_msg, e.message, msg=msg)
+    self.assertRegex(e.detail, expected_detail, msg=msg)
+
+  def tearDown(self):
+    self.anon = self.user = self.admin = None
+    TracRpcTestCase.tearDown(self)
 
 
 def test_suite():
