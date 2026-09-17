@@ -39,20 +39,94 @@ from types import GeneratorType
 from trac.core import Component, implements, TracError
 from trac.perm import PermissionError
 from trac.resource import ResourceNotFound
+from trac.util.text import to_unicode
 from trac.web.api import HTTPBadRequest, HTTPInternalServerError, \
-                          HTTPUnauthorized, RequestDone
+                          HTTPForbidden, HTTPNotFound, HTTP_STATUS, \
+                          HTTPUnprocessableContent, RequestDone
+
 from tracrpc.api import IRPCProtocol, XMLRPCSystem, ProtocolException
 from tracrpc.util import cleandoc_, gettext
 
-import pyamf as amf
+import pyamf
 from pyamf import remoting
-from pyamf.remoting import gateway
+from pyamf.flex import messaging
+from pyamf.remoting import amf0, amf3, gateway
 
-from tracrpcext.exc import *
+from .exc import *
+from tracrpcext import util
 
 __all__ = 'AMFProtocol',
 
 __metaclass__ = type
+
+class Amf0ReqProcessor(amf0.RequestProcessor):
+  def parse_rpc_ctx(self, amf_msg):
+    rpcreq = {'methodName': amf_msg.target,
+              'params': list(amf_msg.body)}
+    # TODO: Process DescribeService header
+    cred = amf_msg.headers.get('Credentials')
+    if cred is not None:
+      rpcreq['amf.userid'] = cred['userid']
+      rpcreq['amf.secret'] = cred['password']
+    return rpcreq
+
+  def build_error_from_ctx(self, rpcreq, error):
+    amf_msg = rpcreq['amf.msg']
+    if isinstance(error, Exception):
+      error = type(error), error, error.__traceback__
+    return self.buildErrorResponse(amf_msg, error)
+
+  def build_resp_from_ctx(self, ctx, value):
+    response = remoting.Response(value)
+
+
+class Amf3ReqProcessor(amf3.RequestProcessor):
+  def parse_rpc_ctx(self, amf_msg):
+    ro_request = amf_msg.body[0]
+    if not isinstance(ro_request, messaging.RemotingMessage):
+      msg_type = type(ro_request).__name__
+      raise ValueError('RPC(amf) Unexpected AMF3 request {msg_type}')
+    rpcreq = {'methodName': amf3.get_service_name(ro_request),
+              'params': list(ro_request.body)}
+    # TODO: User credentials in request
+    return rpcreq
+
+  def build_error_from_ctx(self, rpcreq, error=None):
+    amf_req = rpcreq['amf.req']
+    amf_msg = rpcreq['amf.msg']
+    amf_proc = rpcreq['amf.handler']
+
+    if isinstance(error, Exception):
+      error = type(error), error, error.__traceback__
+
+    ro_request = amf_msg.body[0]
+    fault = amf_proc.buildErrorResponse(ro_request, error)
+    body = remoting.Response(fault, status=remoting.STATUS_ERROR)
+    ro_response = body.body
+    dsid = ro_request.headers.get('DSId', None)
+    if not dsid == 'nil':
+      dsid = amf3.generate_random_id()
+    ro_response.headers.setdefault('DSId', dsid)
+    return body
+
+  def build_resp_from_ctx(self, rpcreq, value):
+    amf_msg = rpcreq['amf.msg']
+    ro_request = amf_msg.body[0]
+
+    ro_response = amf3.generate_acknowledgement(ro_request)
+    ro_response.body = value
+    return remoting.Response(ro_response)
+
+
+class TracRpcGateway(gateway.BaseGateway):
+  """Trac AMF Remoting gateway.
+  """
+
+  def getServiceRequest(self, amf_msg, target):
+    return self._request_class(
+      amf_msg, None, target
+    )
+
 
 class AMFProtocol(Component):
   _description = cleandoc_(r"""
@@ -91,6 +165,7 @@ class AMFProtocol(Component):
   implements(IRPCProtocol)
 
   RPC_PROTO = 'Action Message Format'
+  RPC_ID    = 'amf'
 
   # IRPCProtocol methods
   def rpc_info(self):
@@ -101,7 +176,7 @@ class AMFProtocol(Component):
   def rpc_match(self):
     r"""URL mapping for this protocol.
     """
-    yield 'rpc', 'application/x-amf'
+    yield 'rpc', remoting.CONTENT_TYPE
 
   def parse_rpc_request(self, req, content_type):
     """ Parse AMF RPC requests"""
@@ -111,80 +186,179 @@ class AMFProtocol(Component):
 
     # Decode the request
     try:
+      # FIXME: AMF timezone offset?
+      # TODO: Configurable strict decoding mode
       request = remoting.decode(body, strict=False, logger=self.log)
-    except (amf.DecodeError, IOError) as exc:
-      raise ProtocolException("400 Bad Request\n\nThe request body " \
-                              "was unable to be successfully decoded.")
+    except (amf.DecodeError, IOError) as e:
+      raise ProtocolException(e)
     except Exception as e:
       raise
     else :
-      # TODO: What about multicall ?
-      # TODO: Hmmm ... Suspicious loop. Review !
       args = []
-      for d in request:
-        r_id = d[0]
-        method = d[1].target
-        for c in d[1].body:
-          args.append(c)
-      args = args or []
-      return {'id' : r_id, 'method' : method, 'params' : args, 
-              'request' : request}
+      # Prepare for the possibility of inline multicall
+      gw = TracRpcGateway()
+      sigs = [self._get_call_ctx(msg_id, msg, gw) for msg_id, msg in request]
+      nsigs = len(sigs)
+      rpcreq = {}
+      if nsigs == 0:
+        raise ProtocolException('RPC(amf) : Empty request')
+      elif nsigs == 1 and sigs[0]['methodName'] == 'system.multicall':
+        # Avoid unnecessary nested multicall
+        # Override for Trac RPC protocol API
+        rpcreq, = sigs
+        rpcreq['method'] = rpcreq.pop('methodName', '')
+      else:
+        # FIXME : Global req ID ?
+        rpcreq = {'method': 'system.multicall',
+                  'params': sigs,
+                  # Flag to send response messages back wrapped in AMF envelope
+                  'multicall.style': 'amf_packet'}
+      rpcreq['amf.req'] = request
+      return rpcreq
 
   def send_rpc_result(self, req, result):
-    request = req.rpc['request']
+    rpcreq = req.rpc
+    request = rpcreq['amf.req']
+    # Sequences for them pairs of RPC call ID + result
+    if rpcreq.get('multicall.style') == 'amf_packet':
+      # Envelope wrapping multiple messages
+      sigs = rpcreq['params']
+      retvals = ((True, r[0]) # Successful RPC call
+                    if isinstance(r, tuple) else
+                 (False, r)   # RPC failure exception
+                 for r in result)
+      amf_msgs = (
+        (s['id'],
+         self._build_result_msg(s, r)
+            if is_ok else
+         self.build_error_from_ctx(s, r)
+        ) for s, (is_ok, r) in zip(sigs, values)
+      )
+                  
+    else:
+      # Real multicall
+      amf_msgs = [(rpcreq['id'],
+                   self._build_result_msg(rpcreq, result)
+                   )]
+
     response = remoting.Envelope(request.amfVersion, request.clientType)
+    for req_id, amf_msg in amf_msgs:
+      response[req_id] = amf_msg
 
-    for name, message in request:
-      response[name] = remoting.Response(result)
-
-    try :
-      stream = remoting.encode(response, strict=False)
-    except:
-        self.log.exception("RPC(amf) Impossible to encode response of "
-                            "'%s' invoked by '%s'", 
-                            req.rpc['method'], req.authname)
-        raise
-
-    response = stream.getvalue()
-    self.log.debug("RPC(amf) encoded result: %s", stream)
-    self._send_response(req, response, remoting.CONTENT_TYPE)
-#    raise RequestDone()
+    self._send_amf_response(req, rpcreq, response)
 
   def send_rpc_error(self, req, e):
-    if isinstance(e, ProtocolException):
-      self.log.exception("RPC(amf) Could not parse request from '%s'", 
-                            req.authname)
+    # All requests are routed as system.multicall
+    # hence errors raised from within RPC methods do not get in here.
+    rpcreq = req.rpc
+    ts = util.timestamp_label()
+    stack_trace = sys.exc_info()
+    reason = f'Could not parse request from {req.authname}' \
+               if isinstance(e, ProtocolException) else \
+             f"Call by '{req.authname}' failed: {e}"
+    msg = f'RPC({self.RPC_ID}) reference : {ts}'
+    util.logging.rpcerror(self.log, f'{msg}\n\n{reason}', exc_info=stack_trace)
 
-      # TODO: Confirm whether HTTPBadRequest should be used or not
-      errcode, errmsg = HTTPBadRequest.code, e.message
-    elif isinstance(e, (ServiceException, RPCError)):
-      self.log.exception("RPC(amf) Call to '%s' by '%s' failed", 
-                            req.rpc['method'], req.authname)
+    errmsg = f'{reason}\n\n{msg}'
+    ncalls = len(rpcreq['params'])
+    is_real_multicall = rpcreq.get('multicall.style') != 'amf_packet'
+    if not is_real_multicall and ncalls > 1:
+      # Exception raised beyond the scope of system.multicall
+      # HTTP error must be sent back to cancel the potentially
+      # multiple unread AMF RPC messages bundled in request.
+      if isinstance(e, ProtocolException):
+        # TODO: Confirm whether HTTPBadRequest should be used or not
+        errcode = HTTPBadRequest.code
+      elif isinstance(e, (ServiceException, RPCError)):
+        # TODO: Confirm whether HTTPInternalError should be used or not
+        errcode = HTTPInternalServerError.code
+      elif isinstance(e, PermissionError):
+        errcode = HTTPForbidden.code
+      elif isinstance(e, ResourceNotFound):
+        errcode = HTTPUnprocessableContent.code
+      else :
+        errcode = HTTPInternalServerError.code
+      # Send HTTP error back to the client
+      self._send_response(
+        req, errmsg, content_type='text/plain', status=errcode
+      )
+    else:
+      # Single RPC method call
+      # Reply back with AMF response
+      amf_req = rpcreq['amf.req']
+      if is_real_multicall:
+        call_ctx = rpcreq
+      else:
+          call_ctx, = rpcreq['params']
+      amf_proc = call_ctx['amf.handler']
+      msg_id = call_ctx['id']
 
-      # TODO: Confirm whether HTTPBadRequest should be used or not
-      errcode = HTTPInternalServerError.code
-      errmsg = "Internal error: Method '%s' failed unexpectedly. " \
-                          "Consult log for further details."
-    elif isinstance(e, PermissionError):
-      errcode, errmsg = HTTPUnauthorized.code, unicode(e)
-      self.log.warning("RPC(amf) Call to '%s' by '%s' failed: %s", 
-                            req.rpc['method'], req.authname, errmsg)
-    elif isinstance(e, ResourceNotFound):
-      errcode, errmsg = HTTPInternalServerError.code, unicode(e)
-      self.log.warning("RPC(amf) Call to '%s' by '%s' failed: %s", 
-                            req.rpc['method'], req.authname, errmsg)
-    else :
-      self.log.exception("RPC(amf) Call to '%s' by '%s' failed", 
-                            req.rpc['method'], req.authname)
-      errcode, errmsg = HTTPInternalServerError.code, "Unexpected error."
-    req.send_error(None, template='', content_type='text/plain',
-                    status=errcode, env=None, data=errmsg)
+      response = remoting.Envelope(amf_req.amfVersion)
+      msg_resp = amf_proc.build_error_from_ctx(call_ctx, e)
+      response[msg_id] = msg_resp
+
+      self._send_amf_response(req, rpcreq, response)
 
   # Internal methods
-  def _send_response(self, req, content, content_type='text/html', status=200):
+  def _get_processor(self, amf_msg, gw):
+    '''Choose either AMF0 or AMF3 processor for AMF messaage.
+    '''
+    if amf_msg.target == 'null' or not amf_msg.target:
+      return Amf3ReqProcessor(gw)
+    else:
+      return Amf0ReqProcessor(gw)
+
+  def _get_call_ctx(self, msg_id, amf_msg, gw):
+    amf_proc = self._get_processor(amf_msg, gw)
+    rpcreq = amf_proc.parse_rpc_ctx(amf_msg)
+    rpcreq.update({
+      'id': msg_id,
+      'amf.msg': amf_msg,
+      'amf.req': amf_msg.envelope,
+      'amf.handler': amf_proc,
+    })
+    return rpcreq
+
+  def _build_result_msg(self, rpcreq, result):
+    amf_proc = rpcreq['amf.handler']
+    return amf_proc.build_resp_from_ctx(rpcreq, result)
+
+  def _send_amf_response(self, req, rpcreq, amf_resp):
+    try:
+      stream = remoting.encode(
+        amf_resp,
+        # FIXME: Determine strict value from config option
+        strict=False,
+        # FIXME: Time zone value ?
+      )
+    except:
+      ts = util.timestamp_label()
+      stack_trace = sys.exc_info()
+      reason = f'Error encoding AMF response'
+      msg = f'RPC({self.RPC_ID}) reference : {ts}'
+      util.logging.rpcerror(self.log, f'{msg}\n\n{reason}', exc_info=stack_trace)
+
+      errmsg = f'{reason}\n\n{msg}'
+      self._send_response(req, errmsg, 'text/plain', status=500)
+    else:
+      self._send_response(req, stream.getvalue())
+
+  def _send_response(self, req, content,
+                     content_type=remoting.CONTENT_TYPE, charset=None,
+                     status=200):
+    if content_type == 'text/plain':
+      msg_status = HTTP_STATUS.get(status, 'Unexpected protocol error')
+      content = f'{status} {msg_status}\n\n{content}'
+    is_text = isinstance(content, str)
+    ctype_value = content_type
+    if is_text:
+      charset = charset or 'utf-8'
+      ctype_value += '; charset=' + charset
+      content = content.encode(charset)
+
     req.send_response(status)
-    req.send_header('Cache-control', 'must-revalidate')
-    req.send_header('Content-Type', content_type)
+    req.send_header('Cache-Control', 'must-revalidate')
+    req.send_header('Content-Type', ctype_value)
     req.send_header('Content-Length', len(content))
     req.end_headers()
 
