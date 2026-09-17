@@ -25,8 +25,13 @@ License: Apache License 2.0
 
 import unittest
 
-from tracrpcext._amf import AMFProtocol
 from tracrpc.tests import makeSuite, TracRpcTestCase, TracRpcTestSuite
+
+from tracrpcext._amf import AMFProtocol
+from ..util import TracRpcProtocolTestSuite
+from . import Py3AMFTestCase
+
+from pyamf.remoting import RemotingError
 
 class ProtocolProviderTestCase(TracRpcTestCase):
     def setUp(self):
@@ -43,9 +48,26 @@ class ProtocolProviderTestCase(TracRpcTestCase):
         self.assertIn('Content-Type: application/x-amf', docs)
 
 
+class Py3AMFApiTestCase(Py3AMFTestCase):
+
+  def test_xmlrpc_permission(self):
+    # Test returned response if not XML_RPC permission
+    self._revoke_perm('anonymous', 'XML_RPC')
+    try:
+      rpc_sys = self.anon.getService('system')
+      rpc_sys.listMethods()
+    except RemotingError as e:
+      self.assertIn('XML_RPC', str(e))
+    else:
+      self.fail('AMF fault not raised')
+    finally:
+      self._grant_perm('anonymous', 'XML_RPC')
+
+
 def test_suite():
-    suite = TracRpcTestSuite()
+    suite = TracRpcProtocolTestSuite()
     suite.addTest(makeSuite(ProtocolProviderTestCase))
+    suite.addTest(makeSuite(Py3AMFApiTestCase))
     return suite
 
 
