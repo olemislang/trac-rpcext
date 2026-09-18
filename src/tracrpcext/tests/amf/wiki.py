@@ -36,6 +36,7 @@ from tracrpc.tests.wiki import RpcWikiTestCase
 from ..util import TracRpcProtocolTestSuite
 from . import Py3AMFTestCase
 
+from pyamf import amf3
 from pyamf.remoting import RemotingError
 
 class Py3AMFWikiTestCase(Py3AMFTestCase):
@@ -47,21 +48,24 @@ class Py3AMFWikiTestCase(Py3AMFTestCase):
 
     rpc_wiki.putPage('TestAmf/Attachments', 'content', {})
     rpc_wiki.putAttachmentEx(
-      'TestAmf/Attachments', 'feed2.png', 'test image', self.image_in
+      'TestAmf/Attachments', 'feed2.png', 'test image',
+      amf3.ByteArray(self.image_in)
     )
+    rv = rpc_wiki.getAttachment(f'TestAmf/Attachments/feed2.png')
     self.assertEqual(
       self.image_in,
-      rpc_wiki.getAttachment(f'TestAmf/Attachments/feed2.png')
+      rv.getvalue()
     )
 
     # Update attachment (adding new)
     rpc_wiki.putAttachmentEx(
       'TestAmf/Attachments', 'feed2.png', 'test image',
-      self.image_in, False
+      amf3.ByteArray(self.image_in), False
     )
+    rv = rpc_wiki.getAttachment(f'TestAmf/Attachments/feed2.2.png')
     self.assertEqual(
       self.image_in,
-      rpc_wiki.getAttachment(f'TestAmf/Attachments/feed2.2.png')
+      rv.getvalue()
     )
 
     # List attachments
@@ -97,16 +101,17 @@ class Py3AMFWikiTestCase(Py3AMFTestCase):
     # Create the wiki page (absolute image reference)
     rpc_wiki = self.admin.getService('wiki')
     rpc_wiki.putPage(
-      'TestAmf/ImageTest', '[[Image(wiki:ImageTest:feed.png, nolink)]]\n', {}
+      'TestAmf/ImageTest', '[[Image(wiki:TestAmf/ImageTest:feed.png, nolink)]]\n', {}
     )
                         
     # Create attachment
     rpc_wiki.putAttachmentEx(
-      'TestAmf/ImageTest', 'feed.png', 'test image', self.image_in
+      'TestAmf/ImageTest', 'feed.png', 'test image',
+      amf3.ByteArray(self.image_in)
     )
     # Check rendering absolute
     markup_1 = rpc_wiki.getPageHTML('TestAmf/ImageTest')
-    self.assertIn((' src="%s/raw-attachment/wiki/ImageTest/feed.png"' %
+    self.assertIn((' src="%s/raw-attachment/wiki/TestAmf/ImageTest/feed.png"' %
                        self._testenv.url), markup_1)
     # Change to relative image reference and check again
     rpc_wiki.putPage(
