@@ -171,11 +171,11 @@ class AMFProtocol(Component):
   >>> import base64
   >>> from pyamf.remoting import RemotingError
   >>> from pyamf.remoting.client import RemotingService
-  >>> username, password = '$authname', 'mypassword'
+  >>> username, password = 'myuser', 'mypassword'
   >>> url = %(url_anon)r
-  >>> gw = RemotingService(url)
+  >>> client = RemotingService(url)
   >>> auth = base64.encodestring('%%s:%%s' %% (username, password))[:-1]
-  >>> gw.addHTTPHeader("Authorization", "Basic %%s" %% auth)
+  >>> client.addHTTPHeader("Authorization", "Basic %%s" %% auth)
   >>> service = gw.getService('system')
   >>> print service.getAPIVersion()
   %(version)r
@@ -187,6 +187,8 @@ class AMFProtocol(Component):
       header and shall sent to /rpc path relative to the Trac instance base URL.
     * Request `"id"` is required, as stated in section 4.1.3 of AMF0 specification,
       and therefore any marker value received with a request is returned with the response.
+    * RPC methods receiving binary streams as arguments or returning them shall rely on
+      instances of  ByteArray`, which is only available for AMF3 version of the protocol.
   """)
   implements(IRPCProtocol)
 
