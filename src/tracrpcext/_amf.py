@@ -31,7 +31,7 @@ Licensed under the Apache version 2 License
 """
 __author__ = 'Olemis Lang'
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from io import StringIO
 import sys
 from traceback import format_exc
@@ -40,6 +40,7 @@ from types import GeneratorType
 from trac.core import Component, implements, TracError
 from trac.perm import PermissionError
 from trac.resource import ResourceNotFound
+from trac.util.datefmt import to_datetime, utc
 from trac.util.html import Fragment
 from trac.util.text import to_unicode
 from trac.web.api import HTTPBadRequest, HTTPInternalServerError, \
@@ -74,6 +75,8 @@ class TracByteArrayAdapter(pyamf.amf3.ByteArray):
 def _fix_param(value):
   if isinstance(value, pyamf.amf3.ByteArray):
     return TracByteArrayAdapter(value.getvalue())
+  elif isinstance(value, datetime):
+    return to_datetime(value, utc)
   return value
 
 # Encode Binary objects as ByteArray
