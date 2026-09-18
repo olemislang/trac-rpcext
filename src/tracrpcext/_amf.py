@@ -31,6 +31,7 @@ Licensed under the Apache version 2 License
 """
 __author__ = 'Olemis Lang'
 
+from datetime import timedelta
 from io import StringIO
 import sys
 from traceback import format_exc
@@ -187,9 +188,12 @@ class AMFProtocol(Component):
 
     # Decode the request
     try:
-      # FIXME: AMF timezone offset?
       # TODO: Configurable strict decoding mode
-      request = remoting.decode(body, strict=False, logger=self.log)
+      request = remoting.decode(
+        body, strict=False, logger=self.log,
+        # UTC
+        timezone_offset=timedelta(hours=0)
+      )
     except (pyamf.DecodeError, IOError) as e:
       raise ProtocolException(e)
     except Exception as e:
