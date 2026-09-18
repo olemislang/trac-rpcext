@@ -44,78 +44,80 @@ class Py3AMFWikiTestCase(Py3AMFTestCase):
   def test_attachments(self):
     # Create attachment
     rpc_wiki = self.admin.getService('wiki')
+
+    rpc_wiki.putPage('TestAmf/Attachments', 'content', {})
     rpc_wiki.putAttachmentEx(
-      'TitleIndex', 'feed2.png', 'test image', self.image_in
+      'TestAmf/Attachments', 'feed2.png', 'test image', self.image_in
     )
     self.assertEqual(
       self.image_in,
-      rpc_wiki.getAttachment('TitleIndex/feed2.png')
+      rpc_wiki.getAttachment(f'TestAmf/Attachments/feed2.png')
     )
 
     # Update attachment (adding new)
     rpc_wiki.putAttachmentEx(
-      'TitleIndex', 'feed2.png', 'test image',
+      'TestAmf/Attachments', 'feed2.png', 'test image',
       self.image_in, False
     )
     self.assertEqual(
       self.image_in,
-      rpc_wiki.getAttachment('TitleIndex/feed2.2.png')
+      rpc_wiki.getAttachment(f'TestAmf/Attachments/feed2.2.png')
     )
 
     # List attachments
     self.assertEqual(
-      ['TitleIndex/feed2.2.png', 'TitleIndex/feed2.png'],
+      [f'TestAmf/Attachments/feed2.2.png', f'TestAmf/Attachments/feed2.png'],
       sorted(
-        rpc_wiki.listAttachments('TitleIndex')
+        rpc_wiki.listAttachments('TestAmf/Attachments')
     ))
     # Delete both attachments
-    rpc_wiki.deleteAttachment('TitleIndex/feed2.png')
-    rpc_wiki.deleteAttachment('TitleIndex/feed2.2.png')
+    rpc_wiki.deleteAttachment(f'TestAmf/Attachments/feed2.png')
+    rpc_wiki.deleteAttachment(f'TestAmf/Attachments/feed2.2.png')
     # List attachments again
     self.assertEqual(
       [],
-      rpc_wiki.listAttachments('TitleIndex')
+      rpc_wiki.listAttachments('TestAmf/Attachments')
     )
 
   def test_getRecentChanges(self):
     rpc_wiki = self.admin.getService('wiki')
-    rpc_wiki.putPage('WikiOne', 'content one', {})
+    rpc_wiki.putPage('TestAmf/WikiOne', 'content one', {})
     time.sleep(1)
-    rpc_wiki.putPage('WikiTwo', 'content two', {})
-    attrs2 = rpc_wiki.getPageInfo('WikiTwo')
+    rpc_wiki.putPage('TestAmf/WikiTwo', 'content two', {})
+    attrs2 = rpc_wiki.getPageInfo('TestAmf/WikiTwo')
     changes = rpc_wiki.getRecentChanges(attrs2['lastModified'])
     self.assertEqual(1, len(changes))
-    self.assertEqual('WikiTwo', changes[0]['name'])
-    self.assertEqual('admin', changes[0]['author'])
+    self.assertEqual('TestAmf/WikiTwo', changes[0]['name'])
+    self.assertEqual('TestAmf/admin', changes[0]['author'])
     self.assertEqual(1, changes[0]['version'])
-    rpc_wiki.deletePage('WikiOne')
-    rpc_wiki.deletePage('WikiTwo')
+    rpc_wiki.deletePage('TestAmf/WikiOne')
+    rpc_wiki.deletePage('TestAmf/WikiTwo')
 
   def test_getPageHTMLWithImage(self):
     # Create the wiki page (absolute image reference)
     rpc_wiki = self.admin.getService('wiki')
     rpc_wiki.putPage(
-      'ImageTest', '[[Image(wiki:ImageTest:feed.png, nolink)]]\n', {}
+      'TestAmf/ImageTest', '[[Image(wiki:ImageTest:feed.png, nolink)]]\n', {}
     )
                         
     # Create attachment
     rpc_wiki.putAttachmentEx(
-      'ImageTest', 'feed.png', 'test image', self.image_in
+      'TestAmf/ImageTest', 'feed.png', 'test image', self.image_in
     )
     # Check rendering absolute
-    markup_1 = rpc_wiki.getPageHTML('ImageTest')
+    markup_1 = rpc_wiki.getPageHTML('TestAmf/ImageTest')
     self.assertIn((' src="%s/raw-attachment/wiki/ImageTest/feed.png"' %
                        self._testenv.url), markup_1)
     # Change to relative image reference and check again
     rpc_wiki.putPage(
-      'ImageTest', '[[Image(feed.png, nolink)]]\n', {}
+      'TestAmf/ImageTest', '[[Image(feed.png, nolink)]]\n', {}
     )
-    markup_2 = rpc_wiki.getPageHTML('ImageTest')
+    markup_2 = rpc_wiki.getPageHTML('TestAmf/ImageTest')
     self.assertEqual(markup_2, markup_1)
 
   def test_getPageHTMLWithManipulator(self):
     rpc_wiki = self.admin.getService('wiki')
-    rpc_wiki.putPage('FooBar', 'foo bar', {})
+    rpc_wiki.putPage('TestAmf/FooBar', 'foo bar', {})
 
     # Enable wiki manipulator
     source = r"""# -*- coding: utf-8 -*-
@@ -132,7 +134,7 @@ class WikiManipulator(Component):
       self.assertEqual(
         '<html><body><p>\nfoo bar baz\n</p>\n'
         '</body></html>',
-        rpc_wiki.getPageHTML('FooBar')
+        rpc_wiki.getPageHTML('TestAmf/FooBar')
       )
 
 

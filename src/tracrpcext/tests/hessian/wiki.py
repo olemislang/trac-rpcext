@@ -44,94 +44,98 @@ class PyHessianWikiTestCase(PyHessianTestCase):
   image_in = RpcWikiTestCase.image_in
 
   def test_attachments(self):
+    # Create wiki page
+    getattr(self.admin, 'wiki.putPage')(
+      'TestHessian/Attachments', 'content', {}
+    )
     # Create attachment
     getattr(self.admin, 'wiki.putAttachmentEx')(
-      'TitleIndex', 'feed2.png', 'test image',
+      'TestHessian/Attachments', 'feed2.png', 'test image',
       Binary(self.image_in)
     )
     self.assertEqual(
       self.image_in,
       getattr(self.admin, 'wiki.getAttachment')(
-        'TitleIndex/feed2.png'
+        'TestHessian/Attachments/feed2.png'
       ).value
     )
 
     # Update attachment (adding new)
     getattr(self.admin, 'wiki.putAttachmentEx')(
-      'TitleIndex', 'feed2.png', 'test image',
+      'TestHessian/Attachments', 'feed2.png', 'test image',
       Binary(self.image_in), False)
     self.assertEqual(
       self.image_in,
       getattr(self.admin, 'wiki.getAttachment')(
-        'TitleIndex/feed2.2.png'
+        'TestHessian/Attachments/feed2.2.png'
       ).value
     )
 
     # List attachments
     self.assertEqual(
-      ['TitleIndex/feed2.2.png', 'TitleIndex/feed2.png'],
+      ['TestHessian/Attachments/feed2.2.png', 'TestHessian/Attachments/feed2.png'],
       sorted(
-        getattr(self.admin, 'wiki.listAttachments')('TitleIndex')
+        getattr(self.admin, 'wiki.listAttachments')('TestHessian/Attachments')
     ))
     # Delete both attachments
-    getattr(self.admin, 'wiki.deleteAttachment')('TitleIndex/feed2.png')
-    getattr(self.admin, 'wiki.deleteAttachment')('TitleIndex/feed2.2.png')
+    getattr(self.admin, 'wiki.deleteAttachment')('TestHessian/Attachments/feed2.png')
+    getattr(self.admin, 'wiki.deleteAttachment')('TestHessian/Attachments/feed2.2.png')
     # List attachments again
     self.assertEqual(
       (),
-      getattr(self.admin, 'wiki.listAttachments')('TitleIndex')
+      getattr(self.admin, 'wiki.listAttachments')('TestHessian/Attachments')
     )
 
   def test_getRecentChanges(self):
     getattr(self.admin, 'wiki.putPage')(
-      'WikiOne', 'content one', {}
+      'TestHessian/WikiOne', 'content one', {}
     )
     time.sleep(1)
     getattr(self.admin, 'wiki.putPage')(
-      'WikiTwo', 'content two', {}
+      'TestHessian/WikiTwo', 'content two', {}
     )
     attrs2 = getattr(self.admin, 'wiki.getPageInfo')(
-      'WikiTwo'
+      'TestHessian/WikiTwo'
     )
     changes = getattr(self.admin, 'wiki.getRecentChanges')(
       attrs2['lastModified']
     )
     self.assertEqual(1, len(changes))
-    self.assertEqual('WikiTwo', changes[0]['name'])
+    self.assertEqual('TestHessian/WikiTwo', changes[0]['name'])
     self.assertEqual('admin', changes[0]['author'])
     self.assertEqual(1, changes[0]['version'])
-    getattr(self.admin, 'wiki.deletePage')('WikiOne')
-    getattr(self.admin, 'wiki.deletePage')('WikiTwo')
+    getattr(self.admin, 'wiki.deletePage')('TestHessian/WikiOne')
+    getattr(self.admin, 'wiki.deletePage')('TestHessian/WikiTwo')
 
   def test_getPageHTMLWithImage(self):
     # Create the wiki page (absolute image reference)
     getattr(self.admin, 'wiki.putPage')(
-      'ImageTest', '[[Image(wiki:ImageTest:feed.png, nolink)]]\n', {}
+      'TestHessian/ImageTest', '[[Image(wiki:TestHessian/ImageTest:feed.png, nolink)]]\n', {}
     )
                         
     # Create attachment
     getattr(self.admin, 'wiki.putAttachmentEx')(
-      'ImageTest', 'feed.png', 'test image',
+      'TestHessian/ImageTest', 'feed.png', 'test image',
       Binary(self.image_in)
     )
     # Check rendering absolute
     markup_1 = getattr(self.admin, 'wiki.getPageHTML')(
-      'ImageTest'
+      'TestHessian/ImageTest'
     )
-    self.assertIn((' src="%s/raw-attachment/wiki/ImageTest/feed.png"' %
+    self.assertIn((' src="%s/raw-attachment/wiki/TestHessian/ImageTest/feed.png"' %
                        self._testenv.url), markup_1)
     # Change to relative image reference and check again
     getattr(self.admin, 'wiki.putPage')(
-      'ImageTest', '[[Image(feed.png, nolink)]]\n', {}
+      'TestHessian/ImageTest', '[[Image(feed.png, nolink)]]\n', {}
     )
     markup_2 = getattr(self.admin, 'wiki.getPageHTML')(
-      'ImageTest'
+      'TestHessian/ImageTest'
     )
     self.assertEqual(markup_2, markup_1)
 
   def test_getPageHTMLWithManipulator(self):
     getattr(self.admin, 'wiki.putPage')(
-      'FooBar', 'foo bar', {}
+      'TestHessian/FooBar', 'foo bar', {}
     )
     # Enable wiki manipulator
     source = r"""# -*- coding: utf-8 -*-
@@ -149,7 +153,7 @@ class WikiManipulator(Component):
         '<html><body><p>\nfoo bar baz\n</p>\n'
         '</body></html>',
         getattr(self.admin, 'wiki.getPageHTML')(
-          'FooBar'
+          'TestHessian/FooBar'
         ))
 
 

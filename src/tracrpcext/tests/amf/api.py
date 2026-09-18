@@ -81,7 +81,7 @@ class Py3AMFApiTestCase(Py3AMFTestCase):
                      result[3].message)
 
   def test_large_file(self):
-    pagename = 'SandBox/LargeJsonrpc'
+    pagename = 'TestAmf/LargeJsonrpc'
     filename = 'large.dat'
     rpc_wiki = self.admin.getService('wiki')
     rv = rpc_wiki.putPage(

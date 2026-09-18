@@ -155,7 +155,7 @@ class PyHessianApiTestCase(PyHessianTestCase):
 RPC\(Hessian\) reference : \d+:\d+''')
 
   def test_large_file(self):
-    pagename = 'SandBox/LargeJsonrpc'
+    pagename = 'TestHessian/LargeJsonrpc'
     filename = 'large.dat'
     rv = getattr(self.admin, 'wiki.putPage')(
       pagename, 'attachment:' + filename, {}
