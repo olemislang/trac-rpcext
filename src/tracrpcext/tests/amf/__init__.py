@@ -27,7 +27,9 @@ __all__ = ()
 
 from pyamf.remoting import client
 
-from tracrpc.tests import TracRpcTestCase, TracRpcTestSuite
+from tracrpc.tests import TracRpcTestCase
+
+from ..util import TracRpcProtocolTestSuite
 
 class Py3AMFTestCase(TracRpcTestCase):
   '''Base class for test cases powered by python-hessian client.
@@ -57,11 +59,11 @@ class Py3AMFTestCase(TracRpcTestCase):
 
 
 def test_suite():
-    suite = TracRpcTestSuite()
+    suite = TracRpcProtocolTestSuite()
     # AMF test suite
-    from . import api #, ticket, wiki, web_ui, search
-    for mod in (api,
-#               ticket, wiki, web_ui, search
+    from . import api, search #, ticket, wiki, web_ui
+    for mod in (api, search,
+#               ticket, wiki, web_ui
     ):
       suite.addTest(mod.test_suite())
     return suite
