@@ -113,6 +113,18 @@ class Py3AMFApiTestCase(Py3AMFTestCase):
     finally:
       self._grant_perm('anonymous', 'XML_RPC')
 
+  def test_method_not_found(self):
+    try:
+      rpc_sys = self.admin.getService('system')
+      rpc_sys.doesNotExist()
+    except RemotingError as e:
+      self.assertEqual(
+        'RPC method "system.doesNotExist" not found',
+        e.args[0]
+      )
+    else:
+      self.fail('AMF remoting fault not raised')
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
