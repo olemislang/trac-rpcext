@@ -91,6 +91,28 @@ class Py3AMFWikiTestCase(Py3AMFTestCase):
     rpc_wiki.deletePage('WikiOne')
     rpc_wiki.deletePage('WikiTwo')
 
+  def test_getPageHTMLWithImage(self):
+    # Create the wiki page (absolute image reference)
+    rpc_wiki = self.admin.getService('wiki')
+    rpc_wiki.putPage(
+      'ImageTest', '[[Image(wiki:ImageTest:feed.png, nolink)]]\n', {}
+    )
+                        
+    # Create attachment
+    rpc_wiki.putAttachmentEx(
+      'ImageTest', 'feed.png', 'test image', self.image_in
+    )
+    # Check rendering absolute
+    markup_1 = rpc_wiki.getPageHTML('ImageTest')
+    self.assertIn((' src="%s/raw-attachment/wiki/ImageTest/feed.png"' %
+                       self._testenv.url), markup_1)
+    # Change to relative image reference and check again
+    rpc_wiki.putPage(
+      'ImageTest', '[[Image(feed.png, nolink)]]\n', {}
+    )
+    markup_2 = rpc_wiki.getPageHTML('ImageTest')
+    self.assertEqual(markup_2, markup_1)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
