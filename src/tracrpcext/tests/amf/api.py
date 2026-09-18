@@ -139,6 +139,31 @@ class Py3AMFApiTestCase(Py3AMFTestCase):
     else:
       self.fail('AMF remoting fault not raised')
 
+  def test_resource_not_found(self):
+    # A Ticket resource
+    try:
+      rpc_tckt = self.admin.getService('ticket')
+      rpc_tckt.get(2147483647)
+    except RemotingError as e:
+      self.assertEqual(
+        'Ticket 2147483647 does not exist.',
+        e.args[0]
+      )
+    else:
+      self.fail('AMF remoting fault not raised')
+
+    # A Wiki resource
+    try:
+      rpc_wiki = self.admin.getService('wiki')
+      rpc_wiki.getPage("Test", 10)
+    except RemotingError as e:
+      self.assertEqual(
+        'Wiki page "Test" does not exist at version 10',
+        e.args[0]
+      )
+    else:
+      self.fail('AMF remoting fault not raised')
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
