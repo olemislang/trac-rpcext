@@ -92,7 +92,7 @@ class Py3AMFWikiTestCase(Py3AMFTestCase):
     changes = rpc_wiki.getRecentChanges(attrs2['lastModified'])
     self.assertEqual(1, len(changes))
     self.assertEqual('TestAmf/WikiTwo', changes[0]['name'])
-    self.assertEqual('TestAmf/admin', changes[0]['author'])
+    self.assertEqual('admin', changes[0]['author'])
     self.assertEqual(1, changes[0]['version'])
     rpc_wiki.deletePage('TestAmf/WikiOne')
     rpc_wiki.deletePage('TestAmf/WikiTwo')
