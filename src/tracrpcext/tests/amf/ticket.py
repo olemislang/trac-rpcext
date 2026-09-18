@@ -147,6 +147,61 @@ class Py3AMFTicketTestCase(Py3AMFTestCase):
       env.config.save()
       self.assertEqual(0, rpc_tckt.delete(tid))
 
+  def test_FineGrainedSecurity(self):
+    rpc_admin = self.admin.getService('ticket')
+    rpc_user = self.user.getService('ticket')
+    rpc_anon = self.anon.getService('ticket')
+    tid1 = rpc_admin.create('abc', '123', {})
+    tid2 = rpc_admin.create('def', '456', {})
+    self.assertEqual(tid2, tid1 + 1)
+    # First some non-restricted tests for comparison:
+    self.assertRaises(
+      RemotingError, rpc_anon.create, 'abc', 'def'
+    )
+    self.assertEqual([tid1, tid2], rpc_user.query())
+    self.assertTrue(rpc_user.get(tid2))
+    self.assertTrue(rpc_user.update(tid1, "ok"))
+    self.assertTrue(rpc_user.update(tid2, "ok"))
+    # Enable security policy and test
+    source = rf"""# -*- coding: utf-8 -*-
+from trac.core import Component, implements
+from trac.perm import IPermissionPolicy
+class TicketPolicy(Component):
+    implements(IPermissionPolicy)
+    def check_permission(self, action, username, resource, perm):
+        if username == 'user' and resource and resource.id == {tid2}:
+            return False
+        if username == 'anonymous' and action == 'TICKET_CREATE':
+            return True
+"""
+    env = self._testenv.get_trac_environment()
+    _old_conf = env.config.get('trac', 'permission_policies')
+    env.config.set('trac', 'permission_policies',
+                       'TicketPolicy,' + _old_conf)
+    env.config.save()
+    try:
+      with self._plugin(source, 'TicketPolicy.py'):
+        self._testenv.restart()
+        self.assertEqual([tid1], rpc_user.query())
+        self.assertTrue(rpc_user.get(tid1))
+        self.assertRaises(RemotingError, rpc_user.get, tid2)
+        self.assertTrue(rpc_user.update(tid1, "ok"))
+        self.assertRaises(
+          RemotingError, rpc_user.update,
+          tid2, "not ok"
+        )
+        tid3 = rpc_anon.create('efg', '789', {})
+        self.assertEqual(tid3, tid2 + 1)
+    finally:
+      # Clean, reset and simple verification
+      env.config.set('trac', 'permission_policies', _old_conf)
+      env.config.save()
+
+    self.assertEqual([tid1, tid2, tid3], rpc_user.query())
+    self.assertEqual(0, rpc_admin.delete(tid1))
+    self.assertEqual(0, rpc_admin.delete(tid2))
+    self.assertEqual(0, rpc_admin.delete(tid3))
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
