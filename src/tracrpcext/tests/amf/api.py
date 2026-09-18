@@ -32,6 +32,7 @@ from tracrpcext._amf import AMFProtocol
 from ..util import TracRpcProtocolTestSuite
 from . import Py3AMFTestCase
 
+from pyamf import amf3
 from pyamf.remoting import RemotingError
 
 class ProtocolProviderTestCase(TracRpcTestCase):
@@ -91,15 +92,15 @@ class Py3AMFApiTestCase(Py3AMFTestCase):
 
     content = bytes(bytearray(range(256))) * 4 * 1024 * 4  # 4 MB
     rv = rpc_wiki.putAttachmentEx(
-      pagename, filename, 'Large file', content
+      pagename, filename, 'Large file', amf3.ByteArray(content)
     )
     self.assertEqual(filename, rv)
 
     rv = rpc_wiki.getAttachment(
       '%s/%s' % (pagename, filename)
     )
-    self.assertIsInstance(rv, type(None))
-    self.assertEqual(content, rv.value)
+    self.assertIsInstance(rv, amf3.ByteArray)
+    self.assertEqual(content, rv.getvalue())
 
   def test_xmlrpc_permission(self):
     # Test returned response if not XML_RPC permission
