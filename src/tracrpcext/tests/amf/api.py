@@ -23,6 +23,7 @@ License: Apache License 2.0
 (c) 2026 ::: Olemis Lang <olemis at gmail.com>
 """
 
+import sys
 import unittest
 
 from tracrpc.tests import makeSuite, TracRpcTestCase, TracRpcTestSuite
@@ -120,6 +121,19 @@ class Py3AMFApiTestCase(Py3AMFTestCase):
     except RemotingError as e:
       self.assertEqual(
         'RPC method "system.doesNotExist" not found',
+        e.args[0]
+      )
+    else:
+      self.fail('AMF remoting fault not raised')
+
+  def test_wrong_argspec(self):
+    try:
+      rpc_sys = self.admin.getService('system').listMethods("hello")
+    except TypeError as e:
+      self.assertIn(
+        'listMethods() takes exactly 2 arguments' 
+          if sys.version_info[0] == 2 else
+        'listMethods() takes 2 positional arguments but 3 were given',
         e.args[0]
       )
     else:
