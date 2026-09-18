@@ -57,6 +57,29 @@ class Py3AMFSearchTestCase(Py3AMFTestCase):
     finally:
       self.assertEqual(0, rpc_tckt.delete(t1))
 
+  def test_search_none_result(self):
+    # Some plugins may return None instead of empty iterator
+    # https://trac-hacks.org/ticket/12950
+
+    # Add custom plugin to provoke error
+    source = r"""# -*- coding: utf-8 -*-
+from trac.core import *
+from trac.search.api import ISearchSource
+class NoneSearch(Component):
+    implements(ISearchSource)
+    def get_search_filters(self, req):
+        yield ('test', 'Test')
+    def get_search_results(self, req, terms, filters):
+        self.log.debug('Search plugin returning None')
+        return None
+"""
+    with self._plugin(source, 'NoneSearchPlugin.py'):
+      rpc_srch = self.user.getService('search')
+      results = rpc_srch.performSearch(
+        "nothing_should_be_found"
+      )
+      self.assertEqual([], results)
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
