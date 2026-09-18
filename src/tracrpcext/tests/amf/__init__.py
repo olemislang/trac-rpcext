@@ -61,10 +61,8 @@ class Py3AMFTestCase(TracRpcTestCase):
 def test_suite():
     suite = TracRpcProtocolTestSuite()
     # AMF test suite
-    from . import api, search #, ticket, wiki, web_ui
-    for mod in (api, search,
-#               ticket, wiki, web_ui
-    ):
+    from . import api, search, ticket, wiki
+    for mod in (api, search, ticket, wiki):
       suite.addTest(mod.test_suite())
     return suite
 
