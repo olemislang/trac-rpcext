@@ -120,6 +120,33 @@ class Py3AMFTicketTestCase(Py3AMFTestCase):
 
     self.assertEqual(actions, default)
 
+  _delete_ticket_action_controller = RpcTicketTestCase._delete_ticket_action_controller
+
+  def test_getAvailableActions_DeleteTicket(self):
+    # Based on http://trac-hacks.org/ticket/5387
+    env = self._testenv.get_trac_environment()
+    rpc_tckt = self.admin.getService('ticket')
+    tid = rpc_tckt.create('abc', 'def', {})
+    try:
+      self.assertNotIn(
+        'delete',
+        rpc_tckt.getAvailableActions(tid)
+      )
+      env.config.set('ticket', 'workflow',
+        'ConfigurableTicketWorkflow,DeleteTicketActionController'
+      )
+      env.config.save()
+      with self._plugin(self._delete_ticket_action_controller,
+                        'DeleteTicket.py'):
+        self.assertIn(
+          'delete',
+          rpc_tckt.getAvailableActions(tid)
+        )
+    finally:
+      env.config.set('ticket', 'workflow', 'ConfigurableTicketWorkflow')
+      env.config.save()
+      self.assertEqual(0, rpc_tckt.delete(tid))
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
