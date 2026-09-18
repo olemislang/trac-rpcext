@@ -40,6 +40,7 @@ from types import GeneratorType
 from trac.core import Component, implements, TracError
 from trac.perm import PermissionError
 from trac.resource import ResourceNotFound
+from trac.util.html import Fragment
 from trac.util.text import to_unicode
 from trac.web.api import HTTPBadRequest, HTTPInternalServerError, \
                           HTTPForbidden, HTTPNotFound, HTTP_STATUS, \
@@ -61,6 +62,8 @@ __all__ = 'AMFProtocol',
 
 __metaclass__ = type
 
+# AMF encode / decode setup
+
 class TracByteArrayAdapter(pyamf.amf3.ByteArray):
   # Needed so that RPC methods can read binary data
   @property
@@ -75,6 +78,9 @@ def _fix_param(value):
 
 # Encode Binary objects as ByteArray
 pyamf.add_type(Binary, lambda obj, encoder: pyamf.amf3.ByteArray(obj.data))
+
+# Encode Fragment objects as string (XML?)
+pyamf.add_type(Fragment, lambda obj, encoder: str(obj))
 
 class Amf0ReqProcessor(amf0.RequestProcessor):
   def parse_rpc_ctx(self, amf_msg):
