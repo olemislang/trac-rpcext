@@ -62,6 +62,16 @@ class Py3AMFTicketTestCase(Py3AMFTestCase):
     else:
       self.fail('Unexpected success')
 
+  def test_create_empty_summary(self):
+    try:
+      self.admin.getService('ticket').create(
+        "", "the description", {}
+      )
+    except RemotingError as e:
+      self.assertIn("Tickets must contain a summary.", unicode(e))
+    else:
+      self.fail("Exception not raised creating ticket with empty summary")
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
