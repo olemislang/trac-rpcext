@@ -73,9 +73,23 @@ class Py3AMFWikiTestCase(Py3AMFTestCase):
     rpc_wiki.deleteAttachment('TitleIndex/feed2.2.png')
     # List attachments again
     self.assertEqual(
-      (),
+      [],
       rpc_wiki.listAttachments('TitleIndex')
     )
+
+  def test_getRecentChanges(self):
+    rpc_wiki = self.admin.getService('wiki')
+    rpc_wiki.putPage('WikiOne', 'content one', {})
+    time.sleep(1)
+    rpc_wiki.putPage('WikiTwo', 'content two', {})
+    attrs2 = rpc_wiki.getPageInfo('WikiTwo')
+    changes = rpc_wiki.getRecentChanges(attrs2['lastModified'])
+    self.assertEqual(1, len(changes))
+    self.assertEqual('WikiTwo', changes[0]['name'])
+    self.assertEqual('admin', changes[0]['author'])
+    self.assertEqual(1, changes[0]['version'])
+    rpc_wiki.deletePage('WikiOne')
+    rpc_wiki.deletePage('WikiTwo')
 
 
 def test_suite():
