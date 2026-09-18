@@ -45,10 +45,11 @@ from trac.web.api import HTTPBadRequest, HTTPInternalServerError, \
                           HTTPForbidden, HTTPNotFound, HTTP_STATUS, \
                           HTTPUnprocessableContent, RequestDone
 
-from tracrpc.api import IRPCProtocol, XMLRPCSystem, ProtocolException
+from tracrpc.api import Binary, IRPCProtocol, XMLRPCSystem, \
+                        ProtocolException
 from tracrpc.util import cleandoc_, gettext
 
-import pyamf
+import pyamf.amf3
 from pyamf import remoting
 from pyamf.flex import messaging
 from pyamf.remoting import amf0, amf3, gateway
@@ -60,10 +61,25 @@ __all__ = 'AMFProtocol',
 
 __metaclass__ = type
 
+class TracByteArrayAdapter(pyamf.amf3.ByteArray):
+  # Needed so that RPC methods can read binary data
+  @property
+  def data(self):
+    return self.getvalue()
+
+# FIXME : This belongs in pyamf decoder instead
+def _fix_param(value):
+  if isinstance(value, pyamf.amf3.ByteArray):
+    return TracByteArrayAdapter(value.getvalue())
+  return value
+
+# Encode Binary objects as ByteArray
+pyamf.add_type(Binary, lambda obj, encoder: pyamf.amf3.ByteArray(obj.data))
+
 class Amf0ReqProcessor(amf0.RequestProcessor):
   def parse_rpc_ctx(self, amf_msg):
     rpcreq = {'methodName': amf_msg.target,
-              'params': list(amf_msg.body)}
+              'params': [_fix_param(v) for v in amf_msg.body]}
     # TODO: Process DescribeService header
     cred = amf_msg.headers.get('Credentials')
     if cred is not None:
@@ -88,7 +104,7 @@ class Amf3ReqProcessor(amf3.RequestProcessor):
       msg_type = type(ro_request).__name__
       raise ValueError('RPC(amf) Unexpected AMF3 request {msg_type}')
     rpcreq = {'methodName': amf3.get_service_name(ro_request),
-              'params': list(ro_request.body)}
+              'params': [_fix_param(v) for v in ro_request.body]}
     # TODO: User credentials in request
     return rpcreq
 
