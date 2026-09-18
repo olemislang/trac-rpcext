@@ -32,13 +32,18 @@ from tracrpc.tests import TracRpcTestCase, TracRpcTestSuite
 class Py3AMFTestCase(TracRpcTestCase):
   '''Base class for test cases powered by python-hessian client.
   '''
+  def _for_user(self, client, username, secret):
+    client.opener = self._opener_auth(client._root_url,
+                                 username, secret).open
+
   def setUp(self):
     TracRpcTestCase.setUp(self)
+    # Authenticate through HTTP headers
     self.anon = client.RemotingService(self._testenv.url_anon)
-    self.user = client.RemotingService(self._testenv.url_anon)
-    self.user.setCredentials('user', 'user')
-    self.admin = client.RemotingService(self._testenv.url_anon)
-    self.admin.setCredentials('admin', 'admin')
+    self.user = client.RemotingService(self._testenv.url_auth)
+    self._for_user(self.user, 'user', 'user')
+    self.admin = client.RemotingService(self._testenv.url_auth)
+    self._for_user(self.admin, 'admin', 'admin')
 
   def assertFaultMatches(self, e, expected_code, expected_msg,
                          expected_detail, msg=None):
