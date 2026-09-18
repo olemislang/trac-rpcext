@@ -229,7 +229,7 @@ RPC\(Hessian\) reference : \d+:\d+''')
         r'RPC\(Hessian\) reference : \d+:\d+',
       )
     else:
-      self.fail('xmlrpclib.Fault not raised')
+      self.fail('Hessian fault not raised')
 
   def test_resource_not_found(self):
     # A Ticket resource
