@@ -180,6 +180,7 @@ class AMFProtocol(Component):
 
   def parse_rpc_request(self, req, content_type):
     """ Parse AMF RPC requests"""
+    self.log.info(f'RPC({self.RPC_ID}) Call by {req.authname}')
     self.debug = False
     body = req.read(int(req.get_header('Content-Length')))
     stream = None
@@ -189,7 +190,7 @@ class AMFProtocol(Component):
       # FIXME: AMF timezone offset?
       # TODO: Configurable strict decoding mode
       request = remoting.decode(body, strict=False, logger=self.log)
-    except (amf.DecodeError, IOError) as e:
+    except (pyamf.DecodeError, IOError) as e:
       raise ProtocolException(e)
     except Exception as e:
       raise
@@ -210,7 +211,7 @@ class AMFProtocol(Component):
       else:
         # FIXME : Global req ID ?
         rpcreq = {'method': 'system.multicall',
-                  'params': sigs,
+                  'params': [sigs],
                   # Flag to send response messages back wrapped in AMF envelope
                   'multicall.style': 'amf_packet'}
       rpcreq['amf.req'] = request
@@ -222,7 +223,7 @@ class AMFProtocol(Component):
     # Sequences for them pairs of RPC call ID + result
     if rpcreq.get('multicall.style') == 'amf_packet':
       # Envelope wrapping multiple messages
-      sigs = rpcreq['params']
+      sigs, = rpcreq['params']
       retvals = ((True, r[0]) # Successful RPC call
                     if isinstance(r, tuple) else
                  (False, r)   # RPC failure exception
@@ -232,7 +233,7 @@ class AMFProtocol(Component):
          self._build_result_msg(s, r)
             if is_ok else
          self._build_error_msg(s, r)
-        ) for s, (is_ok, r) in zip(sigs, values)
+        ) for s, (is_ok, r) in zip(sigs, retvals)
       )
     else:
       # Real multicall
@@ -288,7 +289,7 @@ class AMFProtocol(Component):
       if is_real_multicall:
         call_ctx = rpcreq
       else:
-          call_ctx, = rpcreq['params']
+          (call_ctx,), = rpcreq['params']
       amf_proc = call_ctx['amf.handler']
       msg_id = call_ctx['id']
 
@@ -322,9 +323,18 @@ class AMFProtocol(Component):
     amf_proc = rpcreq['amf.handler']
     return amf_proc.build_resp_from_ctx(rpcreq, result)
 
-  def _build_error_msg(self, rpcreq, result):
+  def _build_error_msg(self, rpcreq, e):
     amf_proc = rpcreq['amf.handler']
-    return amf_proc.build_error_from_ctx(rpcreq, result)
+
+    ts = util.timestamp_label()
+    stack_trace = type(e), e, e.__traceback__
+    reason = f'Call to {rpcreq['methodName']} failed'
+    msg = f'RPC({self.RPC_ID}) reference : {ts}'
+    util.logging.rpcerror(self.log,
+                          f'{msg}\n\n{reason}',
+                          exc_info=stack_trace)
+
+    return amf_proc.build_error_from_ctx(rpcreq, e)
 
   def _send_amf_response(self, req, rpcreq, amf_resp):
     try:

@@ -79,6 +79,27 @@ class Py3AMFApiTestCase(Py3AMFTestCase):
     self.assertRegex('RPC method "nonexisting" not found',
                      result[3].message)
 
+  def test_large_file(self):
+    pagename = 'SandBox/LargeJsonrpc'
+    filename = 'large.dat'
+    rpc_wiki = self.admin.getService('wiki')
+    rv = rpc_wiki.putPage(
+      pagename, 'attachment:' + filename, {}
+    )
+    self.assertEqual(True, rv)
+
+    content = bytes(bytearray(range(256))) * 4 * 1024 * 4  # 4 MB
+    rv = rpc_wiki.putAttachmentEx(
+      pagename, filename, 'Large file', content
+    )
+    self.assertEqual(filename, rv)
+
+    rv = rpc_wiki.getAttachment(
+      '%s/%s' % (pagename, filename)
+    )
+    self.assertIsInstance(rv, type(None))
+    self.assertEqual(content, rv.value)
+
   def test_xmlrpc_permission(self):
     # Test returned response if not XML_RPC permission
     self._revoke_perm('anonymous', 'XML_RPC')
