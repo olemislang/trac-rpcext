@@ -310,7 +310,7 @@ class HessianProtocol(Component):
   The following snippet illustrates how to perform authenticated calls 
   using `python-hessian`  library.
 
-  {{{
+  {{{#!python
   >>> from pyhessian.client import HessianProxy
   >>> hsp = HessianProxy('%(url_auth)r)
   >>> getattr(hsp, "system.getAPIVersion")()

@@ -167,7 +167,7 @@ class AMFProtocol(Component):
   The following snippet illustrates how to perform authenticated calls 
   using the [http://www.pyamf.org PyAMF]  library.
 
-  {{{
+  {{{#!python
   >>> import base64
   >>> from pyamf.remoting import RemotingError
   >>> from pyamf.remoting.client import RemotingService
@@ -176,19 +176,22 @@ class AMFProtocol(Component):
   >>> client = RemotingService(url)
   >>> auth = base64.encodestring('%%s:%%s' %% (username, password))[:-1]
   >>> client.addHTTPHeader("Authorization", "Basic %%s" %% auth)
-  >>> service = gw.getService('system')
+  >>> service = client.getService('system')
   >>> print service.getAPIVersion()
   %(version)r
   }}}
 
   Implementation details:
 
-    * AMF calls must include Content-Type: application/x-amf
-      header and shall sent to /rpc path relative to the Trac instance base URL.
+    * AMF calls must include `Content-Type: application/x-amf`
+      header and shall sent to one of `/rpc` or `/login/rpc` paths
+      relative to the base URL of the Trac environment.
     * Request `"id"` is required, as stated in section 4.1.3 of AMF0 specification,
       and therefore any marker value received with a request is returned with the response.
     * RPC methods receiving binary streams as arguments or returning them shall rely on
-      instances of  ByteArray`, which is only available for AMF3 version of the protocol.
+      instances of `ByteArray` , which is only available for
+      [http://opensource.adobe.com/wiki/download/attachments/1114283/amf3_spec_05_05_08.pdf AMF3]
+      version of the protocol.
   """)
   implements(IRPCProtocol)
 
