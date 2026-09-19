@@ -23,6 +23,7 @@ License: Apache License 2.0
 (c) 2026 ::: Olemis Lang <olemis at gmail.com>
 """
 
+import copy
 import sys
 import unittest
 
@@ -33,7 +34,8 @@ from ..util import TracRpcProtocolTestSuite
 from . import Py3AMFTestCase
 
 from pyamf import amf3
-from pyamf.remoting import RemotingError
+from pyamf.remoting import ErrorFault, RemotingError, \
+                           STATUS_OK, STATUS_ERROR
 
 class ProtocolProviderTestCase(TracRpcTestCase):
     def setUp(self):
@@ -80,6 +82,57 @@ class Py3AMFApiTestCase(Py3AMFTestCase):
     self.assertEqual('MethodNotFound', result[3]['name'])
     self.assertRegex('RPC method "nonexisting" not found',
                      result[3].message)
+
+  def test_multireq(self):
+    # Multiple AMF RPC messages in single HTTP request
+    rpc_wiki = self.user.getService('wiki',
+                                 auto_execute=False)
+    amf_req1 = rpc_wiki.getAllPages()
+    amf_req2 = rpc_wiki.getPage('WikiStart', 1)
+
+    rpc_status = self.user.getService('ticket.status',
+                                   auto_execute=False)
+    amf_req3 = rpc_status.getAll()
+
+    rpc_unk = self.user.getService('nonexisting',
+                                auto_execute=False)
+    amf_req4 = rpc_unk.method()
+
+    result = self.user.execute()
+
+    self.assertEqual(4, len(result))
+
+    # Assertions for previous call to wiki.getAllPages()
+    amf_rsp1 = result[amf_req1.id]
+    self.assertEqual(STATUS_OK, amf_rsp1.status)
+    self.assertIsInstance(amf_rsp1.body, list)
+    self.assertIn('WikiStart', amf_rsp1.body)
+    self.assertIn('TitleIndex', amf_rsp1.body)
+
+    # Assertions for previous call to wiki.getPage('WikiStart', 1)
+    amf_rsp2 = result[amf_req2.id]
+    self.assertEqual(STATUS_OK, amf_rsp2.status)
+    self.assertIsInstance(amf_rsp2.body, str)
+    self.assertIn('Welcome', amf_rsp2.body)
+
+    # Assertions for previous call to ticket.status.getAll()
+    amf_rsp3 = result[amf_req3.id]
+    self.assertEqual(STATUS_OK, amf_rsp3.status)
+    self.assertEqual(
+      ['accepted', 'assigned', 'closed', 'new', 'reopened'],
+      amf_rsp3.body
+    )
+
+    # Assertions for previous call to nonexisting.method()
+    amf_rsp4 = result[amf_req4.id]
+    self.assertEqual(STATUS_ERROR, amf_rsp4.status)
+    self.assertIsInstance(amf_rsp4.body, ErrorFault)
+    self.assertEqual('error', amf_rsp4.body.level)
+    self.assertEqual('MethodNotFound', amf_rsp4.body.code)
+    self.assertEqual('RPC method "nonexisting.method" not found', amf_rsp4.body.description)
+    # TODO: Add server log reference in details
+    self.assertIs(None, amf_rsp4.body.details)
+    self.assertEqual('', amf_rsp4.body.type)
 
   def test_large_file(self):
     pagename = 'TestAmf/LargeJsonrpc'
