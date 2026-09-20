@@ -1,0 +1,180 @@
+
+= Multiple protocols to perform RPC calls
+
+== Description
+
+This plugin extends the XmlRpcPlugin by adding support for [#rpc-protocols multiple RPC protocols].
+
+Current stable version of the plugin is `2.0.0`.
+
+=== RPC protocols
+
+The following RPC protocols are supported (in alphabetical order).
+
+==== Action Message Format
+
+''Implemented by'' : `tracrpcext._amf.AMFProtocol`
+
+[http://en.wikipedia.org/wiki/Action_Message_Format AMF] is a binary 
+protocol designed by ''Macromedia'', now [http://www.adobe.com Adobe Systems],
+to provide a lightweight, efficient means to serialize, deserialize, and transport 
+data between the [http://en.wikipedia.org/wiki/Adobe_Flash_Player Flash Player] 
+and the ''Flash Remoting gateway''. This module adds support for 
+[http://opensource.adobe.com/wiki/download/attachments/1114283/amf0_spec_121207.pdf AMF 0] 
+and [http://opensource.adobe.com/wiki/download/attachments/1114283/amf3_spec_05_05_08.pdf AMF 3].
+
+The following snippet illustrates how to perform authenticated calls 
+using the [https://github.com/StdCarrot/Py3AMF Py3AMF]  library.
+
+{{{#!python
+>>> import base64
+>>> from pyamf.remoting import RemotingError
+>>> from pyamf.remoting.client import RemotingService
+>>> username, password = 'myuser', 'mypassword'
+>>> url = 'https://trac-hacks.org/login/rpc'
+>>> client = RemotingService(url)
+>>> auth = base64.encodestring('%s:%s' % (username, password))[:-1]
+>>> client.addHTTPHeader("Authorization", "Basic %s" % auth)
+>>> service = client.getService('system')
+>>> print service.getAPIVersion()
+[1, 2, 0]
+}}}
+
+Implementation details:
+
+  * AMF calls must include `Content-Type: application/x-amf`
+    header and shall sent to one of `/rpc` or `/login/rpc` paths
+    relative to the base URL of the Trac environment.
+  * Request `"id"` is required, as stated in section 4.1.3 of AMF0 specification,
+    and therefore any marker value received with a request is returned with the response.
+  * RPC methods receiving binary streams as arguments or returning them shall rely on
+    instances of `ByteArray` , which is only available for
+    [http://opensource.adobe.com/wiki/download/attachments/1114283/amf3_spec_05_05_08.pdf AMF3]
+    version of the protocol.
+  * Multiple AMF RPC messages may be bundled in a single HTTP request as described in the
+    following example using the [http://www.pyamf.org PyAMF]  library.
+
+{{{#!python
+>>> from pyamf import remoting
+>>> service = client.getService('system', auto_execute=False)
+>>> req1 = service.getAPIVersion()
+>>> req2 = system.methodSignature('system.getAPIVersion')
+>>> req3 = system.methodSignature('system.methodHelp')
+>>> req4 = system.unexisting()
+>>> response = client.execute()
+>>> rsp1 = response[req1.id]
+>>> rsp1.status == remoting.STATUS_OK
+True
+>>> rsp1.body
+[1,2,0]
+>>> rsp2 = response[req2.id]
+>>> rsp2.status == remoting.STATUS_OK
+True
+>>> rsp2.body
+['array']
+>>> rsp3 = response[req3.id]
+>>> rsp3.status == remoting.STATUS_OK
+True
+>>> rsp3.body
+['string,string']
+>>> rsp4 = response[req4.id]
+>>> rsp4.status == remoting.STATUS_ERROR
+True
+>>> isinstance(rsp4.body, Exception)
+True
+>>> rsp4.body.code
+MethodNotFound
+>>> rsp4.body.description
+'RPC method "system.nonexisting" not found'
+}}}
+
+==== Hessian
+
+''Implemented by'' : `tracrpcext._hessian.HessianProtocol`
+
+[http://hessian.caucho.com/doc/hessian-overview.xtp Hessian] is a 
+dynamically-typed binary RPC protocol. This component adds support for 
+[http://hessian.caucho.com/doc/hessian-1.0-spec.xtp version 1.0] and
+[http://hessian.caucho.com/doc/hessian-ws.html version 2.0]. There are
+[http://hessian.caucho.com/#HessianImplementationsDownload client implementations]
+available for some popular programming languages.
+
+The following snippet illustrates how to perform authenticated calls 
+using `python-hessian`  library.
+
+{{{#!python
+>>> from pyhessian.client import HessianProxy
+>>> hsp = HessianProxy('https://trac-hacks.org/login/rpc')
+>>> getattr(hsp, "system.getAPIVersion")()
+[1, 2, 0]
+}}}
+
+Implementation details:
+
+  * Hessian calls must include `Content-Type: application/x-hessian`
+    header.
+  * Anonymous calls shall be sent to `/rpc` path
+    relative to the Trac instance base URL.
+  * Authenticated calls shall be sent to `/login/rpc` path
+    relative to the Trac instance base URL.
+  * RPC request`"id"` marks are not supported yet.
+  * Field `overload` of Hessian calls is ignored.
+  * Some client libraries (e.g. `python-hessian` proxy)
+    return instances of `tuple` rather than `list`.
+  * Multiple RPC methods may be executed at once by
+    invoking `system.multicall` endpoint, and in that case
+    - outcomes are returned in the same order as requested,
+    - the result of a successful method call is returned back
+      wrapped in an unary `tuple`,
+    - faults are sent back encoded as
+      [http://hessian.caucho.com/doc/hessian-serialization.html##map object maps]
+      with `type` set to one of
+      [http://hessian.caucho.com/doc/hessian-ws.html#anchor16 Hessian fault codes].
+      Client libraries are responsible for choosing the concrete class type for
+      object instantiation.
+
+
+== Bugs/Feature Requests
+
+Existing bugs and feature requests for TracRpcProtocolsPlugin are 
+[https://trac-hacks.org/report/9?COMPONENT=TracRpcProtocolsPlugin here].
+
+If you have any issues, create a 
+[https://trac-hacks.org/newticket?component=TracRpcProtocolsPlugin new ticket].
+
+If you want to submit patches, please read the 
+[https://trac-hacks.org/wiki/olemis#Guidelinestocollaborate patch submission guidelines].
+
+== Download
+
+Download the zipped source from [ here].
+
+== Source
+
+You can check out TracRpcProtocolsPlugin from [https://sourceforge.net/p/makercitos/trac-rpcext/ here] using Mercurial, or [https://sourceforge.net/p/makercitos/trac-rpcext/ browse the source] using Sourceforge hgweb interface, unfortunately not yet with Trac.
+
+=== Official mirrors
+
+**Git**
+
+- Github : [https://github.com/olemislang/trac-rpcext olemislang:tracrpcext]
+- Sourceforge : [https://sourceforge.net/p/makercitos/trac-rpcext-git/ makercitos/trac-rpcext-git]
+
+== Installation
+
+This plugin extends `tracrpc.api.XmlRpcSystem` by implementing `tracrpc.api.IRPCProtocol`, and therefore requires at least version `1.1.0` (or higher) of XmlRpcPlugin .
+
+SInce version 2.0.0 only Python 3 is supported.
+
+General instructions on installing Trac plugins can be found on the [https://trac-hacks.org/wiki/TracPlugins#InstallingaTracplugin TracPlugins] page.
+
+== Recent Changes
+
+[https://trac-hacks.org/wiki/TracRpcProtocolsPlugin#RecentChanges Recent Changes]
+
+== Author/Contributors
+
+'''Author:''' [https://trac-hacks.org/wiki/olemis Olemis Lang] [[BR]]
+'''Maintainer:''' [https://trac-hacks.org/wiki/olemis Olemis Lang] [[BR]]
+'''Contributors:''' [https://trac-hacks.org/wiki/thijs thijs]
+
