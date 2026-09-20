@@ -192,6 +192,43 @@ class AMFProtocol(Component):
       instances of `ByteArray` , which is only available for
       [http://opensource.adobe.com/wiki/download/attachments/1114283/amf3_spec_05_05_08.pdf AMF3]
       version of the protocol.
+    * Multiple AMF RPC messages may be bundled in a single HTTP request as described in the
+      following example using the [http://www.pyamf.org PyAMF]  library.
+
+  {{{#!python
+  >>> from pyamf import remoting
+  >>> service = client.getService('system', auto_execute=False)
+  >>> req1 = service.getAPIVersion()
+  >>> req2 = system.methodSignature('system.getAPIVersion')
+  >>> req3 = system.methodSignature('system.methodHelp')
+  >>> req4 = system.unexisting()
+  >>> response = client.execute()
+  >>> rsp1 = response[req1.id]
+  >>> rsp1.status == remoting.STATUS_OK
+  True
+  >>> rsp1.body
+  %(version)r
+  >>> rsp2 = response[req2.id]
+  >>> rsp2.status == remoting.STATUS_OK
+  True
+  >>> rsp2.body
+  ['array']
+  >>> rsp3 = response[req3.id]
+  >>> rsp3.status == remoting.STATUS_OK
+  True
+  >>> rsp3.body
+  ['string,string']
+  >>> rsp4 = response[req4.id]
+  >>> rsp4.status == remoting.STATUS_ERROR
+  True
+  >>> isinstance(rsp4.body, Exception)
+  True
+  >>> rsp4.body.code
+  MethodNotFound
+  >>> rsp4.body.description
+  'RPC method "system.nonexisting" not found'
+
+  }}}
   """)
   implements(IRPCProtocol)
 
