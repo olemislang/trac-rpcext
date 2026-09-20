@@ -165,14 +165,14 @@ class AMFProtocol(Component):
   and [http://opensource.adobe.com/wiki/download/attachments/1114283/amf3_spec_05_05_08.pdf AMF 3].
 
   The following snippet illustrates how to perform authenticated calls 
-  using the [http://www.pyamf.org PyAMF]  library.
+  using the [https://github.com/StdCarrot/Py3AMF Py3MF]  library.
 
   {{{#!python
   >>> import base64
   >>> from pyamf.remoting import RemotingError
   >>> from pyamf.remoting.client import RemotingService
   >>> username, password = 'myuser', 'mypassword'
-  >>> url = %(url_anon)r
+  >>> url = %(url_auth)r
   >>> client = RemotingService(url)
   >>> auth = base64.encodestring('%%s:%%s' %% (username, password))[:-1]
   >>> client.addHTTPHeader("Authorization", "Basic %%s" %% auth)
@@ -193,7 +193,7 @@ class AMFProtocol(Component):
       [http://opensource.adobe.com/wiki/download/attachments/1114283/amf3_spec_05_05_08.pdf AMF3]
       version of the protocol.
     * Multiple AMF RPC messages may be bundled in a single HTTP request as described in the
-      following example using the [http://www.pyamf.org PyAMF]  library.
+      following example using the [https://github.com/StdCarrot/Py3AMF Py3AMF]  library.
 
   {{{#!python
   >>> from pyamf import remoting
