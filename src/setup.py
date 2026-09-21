@@ -25,6 +25,7 @@ from tracrpcext.__init__ import __doc__ as DESC
 versions = [
     (1, 0, 0),
     (2, 0, 0),
+    (2, 1, 0),
     ]
     
 latest = '.'.join(str(x) for x in versions[-1])
@@ -34,11 +35,11 @@ status = {
             'pre-alpha' : "Development Status :: 2 - Pre-Alpha",
             'alpha' :     "Development Status :: 3 - Alpha",
             'beta' :      "Development Status :: 4 - Beta",
-            'stable' :    "Development Status :: 5 - Production/Stable",
+            'stable' :    "Development Status :: 5 - roduction/Stable",
             'mature' :    "Development Status :: 6 - Mature",
             'inactive' :  "Development Status :: 7 - Inactive"
          }
-dev_status = status["alpha"]
+dev_status = status["beta"]
 
 cats = [
     dev_status,
@@ -50,7 +51,6 @@ cats = [
       "Intended Audience :: Information Technology", 
       "Intended Audience :: Other Audience", 
       "Intended Audience :: System Administrators", 
-      "License :: OSI Approved :: Apache Software License",
       "Natural Language :: English", 
       "Natural Language :: Spanish", 
       "Operating System :: OS Independent", 

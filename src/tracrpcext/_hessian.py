@@ -312,7 +312,7 @@ class HessianProtocol(Component):
 
   {{{#!python
   >>> from pyhessian.client import HessianProxy
-  >>> hsp = HessianProxy('%(url_auth)r)
+  >>> hsp = HessianProxy(%(url_auth)r)
   >>> getattr(hsp, "system.getAPIVersion")()
   %(version)r
   }}}
