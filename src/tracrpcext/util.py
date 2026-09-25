@@ -25,6 +25,7 @@ __author__ = 'Olemis Lang'
 
 __metaclass__ = type
 
+import inspect
 import logging
 try:
   from threading import get_native_id as get_thread_id
@@ -33,6 +34,8 @@ except ImportError:
 import types
 
 from trac.util.datefmt import format_datetime
+
+from tracrpc.api import XMLRPCSystem
 
 logging = types.SimpleNamespace(
   RPCERROR = (logging.WARNING + logging.ERROR) // 2,
@@ -51,4 +54,56 @@ def timestamp_label():
     str(get_thread_id())
   ])
 
+POS_PARAM_KINDS = {
+    inspect.Parameter.POSITIONAL_ONLY,
+    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+}
+
+def parse_rpc_kwargs(env, method_name, params):
+  '''Parse RPC method parameters by argument name.
+
+  Considers positional arguments only.
+  '''
+  rpc_sys = env[XMLRPCSystem]
+  if rpc_sys is None:
+    raise RuntimeError('Unable to load XMLRPCSystem. Disabled?')
+  method = rpc_sys.get_method(method_name)
+  sig = inspect.signature(method.callable)
+  # Create copy
+  params = dict(params)
+  new_params = []
+
+  def iter_sig_params(sig_params):
+    sig_params = iter(sig_params)
+    p = None
+    for p in sig_params:
+      # Skip leading Trac-specific args
+      if p.name not in {'self', 'req'}:
+          break
+      p = None
+    if p is not None:
+      # First arg in exposed RPC signature
+      yield p
+      yield from sig_params
+
+  for p in iter_sig_params(sig.parameters.values()):
+    if p.kind not in POS_PARAM_KINDS:
+      break
+    try:
+      new_params.append(params.pop(p.name))
+    except KeyError:
+      # Try to fallback to default argument value
+      if p.default is not p.empty:
+        if len(params) == 0:
+          # No more params left to match.
+          # Leave the rest to Python call semantics
+          break
+        new_params.append(p.default)
+      else:
+        raise
+  if len(params) > 0:
+    # Unknown argument name
+    argnm = next(iter(params.keys()))
+    raise NameError(argnm)
+  return new_params
 
