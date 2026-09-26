@@ -93,6 +93,7 @@ ENTRY_POINTS = r"""
                [trac.plugins]
                amf     = tracrpcext._amf
                hessian = tracrpcext._hessian
+               jsonwsp = tracrpcext._json_wsp
                """
 
 setup(
@@ -103,8 +104,8 @@ setup(
   author_email='olemis+trac@gmail.com',
   maintainer='Olemis Lang',
   maintainer_email='olemis+trac@gmail.com',
-    url='https://sourceforge.net/p/makercitos/trac-rpcext/',
-    download_url='http://pypi.python.org/packages/2.5/%s/%s/%s-%s-py2.5.egg' % \
+  url='https://sourceforge.net/p/makercitos/trac-rpcext/',
+  download_url='http://pypi.python.org/packages/2.5/%s/%s/%s-%s-py2.5.egg' % \
                                 (DIST_NM[0], DIST_NM, DIST_NM, latest,),
   install_requires = [
     'setuptools>=0.6b1',
@@ -115,6 +116,7 @@ setup(
 #        'soaplib>=0.8.1', 
 #        'xmppxmlrpc>=0.3', 
     ],
+  # FIXME: Tests require jsonwspclient
   package_dir = dict([p, i[0]] for p, i in PKG_INFO.items()),
   packages = PKG_INFO.keys(),
   package_data = dict([p, i[1]] for p, i in PKG_INFO.items()),

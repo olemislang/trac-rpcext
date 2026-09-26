@@ -37,6 +37,10 @@ from trac.util.datefmt import format_datetime
 
 from tracrpc.api import XMLRPCSystem
 
+#------------------------------
+# Logging
+#------------------------------
+
 logging = types.SimpleNamespace(
   RPCERROR = (logging.WARNING + logging.ERROR) // 2,
   rpcerror = lambda log, msg, *args, **kwargs: log.log(logging.RPCERROR,
@@ -53,6 +57,10 @@ def timestamp_label():
     format_datetime(format='%Y%m%d%H%M%S%f'),
     str(get_thread_id())
   ])
+
+#------------------------------
+# Functions and callable
+#------------------------------
 
 POS_PARAM_KINDS = {
     inspect.Parameter.POSITIONAL_ONLY,
