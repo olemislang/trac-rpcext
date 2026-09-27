@@ -68,7 +68,7 @@ class JsonWspProtocol(Component):
         "id": 2
       }
     }
-    user: ~ > curl -H "Content-Type: application/json" --data @body.json "(url_anon)s/json-wsp
+    user: ~ > curl -H "Content-Type: application/x-jsonwsp" --data @body.json "(url_auth)s
     {
       "type": "jsonwsp/response",
       "version": "1.0",
@@ -83,11 +83,17 @@ class JsonWspProtocol(Component):
 
     Implementation details:
 
-      * JSON-RPC has no formalized type system, so a class-hint system is used
+      * Non-standard `ContentType : application/x-jsonwsp` header is used to
+        select JSON-WSP for requests sent to /rpc path  to cope with JSON-RPC.
+      * For RPC clients not supporting setting custom HTTP headers JSON-WSP
+        may be selected for HTTP requests sent to `/rpc/jsonwsp` path with
+        `Content-Type: application/json` header set.
+      * JSON-WSP has no formalized type system, so a class-hint system is used
         for input and output of non-standard types:
         * `{"__jsonclass__": ["datetime", "YYYY-MM-DDTHH:MM:SS"]} => DateTime (UTC)`
         * `{"__jsonclass__": ["binary", "<base64-encoded>"]} => Binary`
-      * The optional `cmirror` value can be used to send information from the client
+      * Binary data may be attached to multipart HTTP messages.
+      * The optional `mirror` value can be used to send information from the client
         which will then be reflected by the server and returned unchanged in the
         response object's `reflection` value.
     """)
