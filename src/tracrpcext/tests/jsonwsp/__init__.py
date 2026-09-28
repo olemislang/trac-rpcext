@@ -35,11 +35,15 @@ from jsonwspclient import JsonWspClient
 class JsonWspTestCase(TracRpcTestCase):
   '''Base class for test cases powered by jsonwspclient library.
   '''
+  jsonwsp_services = ()
+
   def setUp(self):
     TracRpcTestCase.setUp(self)
-    self.anon = JsonWspClient(self._testenv.url_anon)
-    self.user = JsonWspClient(self._testenv.url_user)
-    self.admin = JsonWspClient(self._testenv.url_admin)
+    kwargs = {'services': self.jsonwsp_services,
+              'raise_for_fault': True,}
+    self.anon = JsonWspClient(self._testenv.url_anon, **kwargs)
+    self.user = JsonWspClient(self._testenv.url_user, **kwargs)
+    self.admin = JsonWspClient(self._testenv.url_admin, **kwargs)
 
   def assertFaultMatches(self, e, expected_code, expected_msg,
                          expected_detail, msg=None):
@@ -48,6 +52,9 @@ class JsonWspTestCase(TracRpcTestCase):
     self.assertRegex(expected_detail, e.detail, msg=msg)
 
   def tearDown(self):
+    self.anon.close()
+    self.user.close()
+    self.admin.close()
     self.anon = self.user = self.admin = None
     TracRpcTestCase.tearDown(self)
 
