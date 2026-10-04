@@ -30,8 +30,8 @@ from .util import TracRpcProtocolTestSuite
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
-    from . import amf, hessian, test_util
-    for mod in (amf, hessian, test_util,):
+    from . import amf, hessian, test_util, ws
+    for mod in (amf, hessian, test_util, ws,):
       suite.addTest(mod.test_suite())
     return suite
 
