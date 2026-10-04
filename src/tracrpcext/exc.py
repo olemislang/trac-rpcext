@@ -44,7 +44,7 @@ class RpcBaseException(api._CompositeRpcError):
   """Base exception type for RPC protocol errors"""
 
   def __init__(self, message, title=None, proto_id=None):
-    super(RPCBaseException, super).__init__(
+    super(RpcBaseException, self).__init__(
       message, title or '', show_traceback=False
     )
     self.ts = util.timestamp_label()
@@ -109,6 +109,10 @@ class RpcServerError(RpcBaseException):
 
 class ServiceException(RpcServerError):
   r"""The called method threw an exception."""
+
+
+class ServerConfigException(RpcServerError):
+  r"""Server is not properly configured to satisfy a request"""
 
 
 class RpcRuntimeError(RpcServerError):
