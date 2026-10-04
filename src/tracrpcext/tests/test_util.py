@@ -28,19 +28,13 @@ import unittest
 from tracrpc.api import XMLRPCSystem
 from tracrpc.tests import makeSuite, TracRpcTestCase
 
-from .util import TracRpcProtocolTestSuite
+from .util import EnvTestCase, TracRpcProtocolTestSuite
 from .. import util
 
 # Module name of default Hessian client library
 RPC_EXC_MODULE = 'tracrpcext.exc'
 
-class EnvTestCase(TracRpcTestCase):
-
-    def setUp(self):
-        self.env = self._testenv.get_trac_environment()
-
-    def tearDown(self):
-        self.env = None
+class EnvUtilsTestCase(EnvTestCase):
 
     def test_parse_kwargs_noargs(self):
         self.assertEqual([],
@@ -140,7 +134,7 @@ class EnvTestCase(TracRpcTestCase):
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
-    suite.addTest(makeSuite(EnvTestCase))
+    suite.addTest(makeSuite(EnvUtilsTestCase))
     return suite
 
 

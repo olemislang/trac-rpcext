@@ -91,3 +91,12 @@ class TracRpcProtocolTestSuite(unittest.TestSuite):
             for l in new_config:
                 f.write(l)
 
+
+class EnvTestCase(tests.TracRpcTestCase):
+
+    def setUp(self):
+        self.env = self._testenv.get_trac_environment()
+
+    def tearDown(self):
+        self.env = None
+
