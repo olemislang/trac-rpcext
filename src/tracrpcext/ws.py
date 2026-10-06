@@ -198,9 +198,10 @@ class WebServiceSystem(Component):
             # Args
             (list, 'RpcCall'),
         ),
-        'system,listMethods': (
+        'system.listMethods': (
             # Return type
             (list, str),
+            # Args
         ),
         'system.methodSignature': (
             # Return type
@@ -413,7 +414,8 @@ class WebServiceSystem(Component):
                             ws_hints.get('type_names')
                         )
                         break
-                ws_desc = {'types': ws_hints.get('typedefs'),
+                ws_desc = {'name': service_name,
+                           'types': ws_hints.get('typedefs'),
                            'methods': {
                                c.__name__ : self._describe_method(
                                    provider, sigs, c,
