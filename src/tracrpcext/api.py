@@ -49,10 +49,11 @@ class IWebServiceDescriptor(Interface):
 class IWebServiceProtocol(IRPCProtocol):
     """Web service protocol provider.
     """
-    def ws_init(mapper):
+    def ws_init(mapper, url):
         """Define routes for matching web services URI.
 
         mapper: routes.Mapper instance
+        url:    function to generate URIs out of route params
 
         Web service providers must implement IRPCProtocol as well.
         Parsed routes are provided in request's `ws_` attribute
@@ -75,7 +76,8 @@ class IWebServiceProtocol(IRPCProtocol):
 
         Return a dictionary with the following keys
 
-        idl:          a list of identifiers, one for each supported IDL.
+        idl:          a list of identifiers, one for each supported IDL;
+        ctlid:        controller ID for URI routing.
         """
 
     def start_idl_response(req, lang_id):
