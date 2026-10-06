@@ -60,4 +60,6 @@ PyPI = "https://pypi.org/project/TracRpcProtocols"
 amf     = "tracrpcext._amf"
 hessian = "tracrpcext._hessian"
 jsonwsp = "tracrpcext._json_wsp"
+ws      = 'tracrpcext.ws'
+wsui    = 'tracrpcext.web_ui'
 

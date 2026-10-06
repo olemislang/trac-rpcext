@@ -94,6 +94,8 @@ ENTRY_POINTS = r"""
                amf     = tracrpcext._amf
                hessian = tracrpcext._hessian
                jsonwsp = tracrpcext._json_wsp
+               ws      = tracrpcext.ws
+               wsui    = tracrpcext.web_ui
                """
 
 setup(
@@ -113,6 +115,7 @@ setup(
     'TracXMLRPC>=1.1.0', 
     'python-hessian>=1.2.0', 
     'Py3AMF>=0.5',
+    'routes<=2.5.1',
 #        'soaplib>=0.8.1', 
 #        'xmppxmlrpc>=0.3', 
     ],
