@@ -30,7 +30,40 @@ from tracrpc.tests import TracRpcTestCase
 from ..util import TracRpcProtocolTestSuite
 
 from jsonwspclient import JsonWspClient
+from jsonwspclient.jsonwspservice import JsonWspService
 
+
+# Patches for JSON-WSP client
+
+class TestJsonWspService(JsonWspService):
+    def _load_description(self):
+        """Loads description for this service."""
+        # NOTE: Relative path
+        response = self._post(
+            '{}/jsonwsp/description'.format(self.name), method='GET')
+        response.raise_for_status()
+        self._description = response.response_dict
+        self._method_names = list(self._description['methods'])
+        self._types = list(self._description['types'])
+        # NOTE: Service description contains URL. Generate default otherwise.
+        self.url = self._description.get('url') or '%s/jsonwsp' % self.name
+        for method_name, method in self._description['methods'].items():
+            params = list(method['params'])
+            self._set_new_method(method_name, params)
+        self._description_loaded = True
+        self._trigger('service.description_loaded', service=self)
+
+
+class TestJsonWspClient(JsonWspClient):
+    def _load_service(self, service):
+        """Load service."""
+        srv = TestJsonWspService(self, service)
+        self._services[service.lower()] = srv
+        for method_name, method in list(srv.list_methods().items()):
+            if not method_name in self._methods:
+                self._methods[method_name] = method
+
+# Test scenarios
 
 class JsonWspTestCase(TracRpcTestCase):
   '''Base class for test cases powered by jsonwspclient library.
@@ -41,9 +74,18 @@ class JsonWspTestCase(TracRpcTestCase):
     TracRpcTestCase.setUp(self)
     kwargs = {'services': self.jsonwsp_services,
               'raise_for_fault': True,}
-    self.anon = JsonWspClient(self._testenv.url_anon, **kwargs)
-    self.user = JsonWspClient(self._testenv.url_user, **kwargs)
-    self.admin = JsonWspClient(self._testenv.url_admin, **kwargs)
+    self.anon = TestJsonWspClient(
+        self._testenv.url_anon.rsplit('/', 1)[0] + '/ws/',
+        **kwargs
+    )
+    self.user = TestJsonWspClient(
+        self._testenv.url_anon.rsplit('/', 1)[0] + '/ws/',
+        **kwargs
+    )
+    self.admin = TestJsonWspClient(
+        self._testenv.url_anon.rsplit('/', 1)[0] + '/ws/',
+        **kwargs
+    )
 
   def assertFaultMatches(self, e, expected_code, expected_msg,
                          expected_detail, msg=None):
