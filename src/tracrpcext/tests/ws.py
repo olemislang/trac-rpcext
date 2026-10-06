@@ -95,9 +95,11 @@ class WebServiceSystemTestCase(EnvTestCase):
 
     def test_desc_system(self):
         desc = self.ws.generate_service_desc('system')
+        self.assertIn('name', desc)
         self.assertIn('methods', desc)
         self.assertIn('types', desc)
 
+        self.assertEqual('system', desc['name'])
         self.assertEqual({'multicall',
                           'listMethods',
                           'methodHelp',
@@ -119,6 +121,15 @@ class WebServiceSystemTestCase(EnvTestCase):
         }, method_desc)
         self.assertIn('MulticallResult', desc['types'],)
         self.assertIn('RpcCall', desc['types'],)
+
+        # system.listMethods
+        method_desc = desc['methods']['listMethods']
+        self.assertMethodDescMatch({
+            'params': [],
+            'return': {
+                'type': (list, str),
+            }
+        }, method_desc)
 
 
 def test_suite():
