@@ -34,7 +34,7 @@ from ..util import TracRpcProtocolTestSuite
 from . import JsonWspTestCase
 
 
-class ProtocolProviderTestCase(TracRpcTestCase):
+class JsonWspProviderTestCase(TracRpcTestCase):
     def setUp(self):
         TracRpcTestCase.setUp(self)
 
@@ -51,15 +51,17 @@ class ProtocolProviderTestCase(TracRpcTestCase):
 
 
 class JsonWspApiTestCase(JsonWspTestCase):
+  jsonwsp_services = ('system',)
 
   def test_api_version(self):
-    resp = getattr(self.anon, 'system.getAPIVersion')()
+    ws_sys = self.anon.service('system')
+    resp = ws_sys.getAPIVersion()
     self.assertEqual(api.api_version, resp.result)
 
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
-    suite.addTest(makeSuite(ProtocolProviderTestCase))
+    suite.addTest(makeSuite(JsonWspProviderTestCase))
     suite.addTest(makeSuite(JsonWspApiTestCase))
     return suite
 
