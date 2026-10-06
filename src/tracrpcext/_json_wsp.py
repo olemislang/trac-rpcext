@@ -27,23 +27,63 @@ Licensed under the Apache version 2 License
 """
 __author__ = 'Olemis Lang'
 
+from datetime import datetime
+import io
 import json
 
+try:
+    import babel
+except ImportError:
+    babel = None
+
 from trac.core import Component, implements
+from trac.util.datefmt import utc
+from trac.util.html import Fragment, Markup
 from trac.util.text import empty, exception_to_unicode, to_unicode
 from trac.web.api import RequestDone
 
 from tracrpc.api import IRPCProtocol, Binary, MethodNotFound, ProtocolException
-from tracrpc.json_rpc import TracRpcJSONDecoder, TracRpcJSONEncoder
-from tracrpc.util import cleandoc_, gettext, izip
+from tracrpc.util import cleandoc_, gettext, unicode, izip
 
-from . import exc, util
+from . import api, exc, util
 
 __all__ = ['JsonWspProtocol']
 
+# Encoding
 
-# TODO : Implement multipart attachments
+class TracJsonWspEncoder(json.JSONEncoder):
+    """ Extending the JSON encoder to support some additional types:
+    1. datetime.datetime => {"rfc3339", "<str>"}
+    2. tracrpc.api.Binary => {"cid:": "<attachment_id>"}
+    3. empty => ''
+    4. Fragment|Markup => unicode
+    5. babel.support.LazyProxy => unicode
+    """
 
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            # http://www.ietf.org/rfc/rfc3339.txt
+            if obj.tzinfo is None:
+                obj = obj.replace(tzinfo=utc)
+            elif obj.tzinfo is not utc:
+                obj = obj.astimezone(utc)
+            value = obj.strftime('%Y-%m-%dT%H:%M:%S')
+            if obj.microsecond != 0:
+                value += '.%06d' % obj.microsecond
+            return {'rfc3339': value}
+        if isinstance(obj, Binary):
+            # TODO : Implement multipart attachments
+            raise NotImplementedError('Binary attachments not supported yet')
+        if obj is empty:
+            return ''
+        if isinstance(obj, (Fragment, Markup)):
+            return unicode(obj)
+        if babel and isinstance(obj, babel.support.LazyProxy):
+            return unicode(obj)
+        return super(TracJsonWspEncoder, self).default(obj)
+
+
+# Trac components
 
 class JsonWspProtocol(Component):
 
@@ -98,20 +138,18 @@ class JsonWspProtocol(Component):
         response object's `reflection` value.
     """)
 
-    implements(IRPCProtocol)
+    implements(api.IWebServiceProtocol)
 
     # IRPCProtocol methods
 
     RPC_PROTO = 'JSON-WSP'
-    RPC_ID = 'json-wsp'
+    RPC_ID = 'jsonwsp'
 
     def rpc_info(self):
         return self.RPC_PROTO, gettext(self._descritpion)
 
     def rpc_match(self):
-        yield 'rpc', 'application/x-json-wsp'
-        # Provided for avoiding clashes with JSON-RPC
-        yield 'jsonwsp', 'application/json'
+        yield 'rpc', 'application/x-jsonwsp'
 
     def parse_rpc_request(self, req, content_type):
         """Parse JSON-WSP requests"""
@@ -128,7 +166,7 @@ class JsonWspProtocol(Component):
             raise exc.RPCVersionException(f'Unsupported version {version}',
                                           title='incompatible',
                                           proto_id=self.PROTO_ID)
-        
+
         self.log.info(f"RPC({self.PROTO_ID}) JSON-WSP mirror : %s.",
                       repr(data.get('mirror')))
         try:
@@ -210,7 +248,7 @@ class JsonWspProtocol(Component):
                 response = self._json_result(rpcreq, result, mirror)
             self.log.debug(f"RPC({self.RPC_ID}) result: %r", response)
             try:  # JSON encoding
-                response = json.dumps(response, cls=TracRpcJSONEncoder)
+                response = json.dumps(response, cls=TracJsonWspEncoder)
             except Exception as e:
                 self.log.warning(f"RPC({self.RPC_ID}) dumps error: %s",
                                  exception_to_unicode(e))
@@ -219,14 +257,14 @@ class JsonWspProtocol(Component):
                                              proto_id=self.RPC_ID)
                 response = json.dumps(
                    self._json_error(rpcreq, e, mirror=mirror),
-                   cls=TracRpcJSONEncoder
+                   cls=TracJsonWspEncoder
                 )
         except Exception as e:
             self.log.error(f"RPC({self.RPC_ID}) error%s",
                            exception_to_unicode(e, traceback=True))
             response = json.dumps(
                 self._json_error(rpcreq, e, mirror=mirror),
-                cls=TracRpcJSONEncoder
+                cls=TracJsonWspEncoder
             )
         self._send_response(req, response + '\n', rpcreq['mimetype'])
 
@@ -235,12 +273,153 @@ class JsonWspProtocol(Component):
         rpcreq = req.rpc
         mirror = rpcreq.get('mirror')
         response = json.dumps(self._json_error(rpcreq, e, r_id=r_id),
-                              cls=TracRpcJSONEncoder)
+                              cls=TracJsonWspEncoder)
         self._send_response(req, response + '\n', rpcreq['mimetype'])
+
+    # IWebServiceProtocol methods
+
+    def ws_init(self, mapper, url):
+        """Register URI routes and claim JSON-WSP IDL
+        """
+        self.url = url
+        mapper.connect('jsonwsp_call', '/{service}/jsonwsp',
+                       controller='jsonwsp', action='call',
+                       content_type='application/json',)
+        mapper.connect('jsonwsp_desc', '/{service}/jsonwsp/description',
+                       controller='jsonwsp', action='describe',
+                       content_type='application/json', idl='jsonwsp',)
+        return {'idl': ('jsonwsp',),
+                'ctlid': 'jsonwsp',}
+
+    def start_idl_response(self, req, lang_id):
+        """Add HTTP headers in JSON-WSP service description response.
+        """
+        if lang_id == 'jsonwsp':
+            req.send_header('Content-Type', 'application/json; charset=utf-8')
+
+    def encode_ws_idl(self, description, lang_id, writer):
+        """Encode service meta-data in JSON-WSP description language.
+        """
+        service_name = description['name']
+        typedefs = {
+            typenm: self._jsonwsp_typedef(f'type {typenm}', typedef)
+            for typenm, typedef in description['types'].items()
+        }
+
+        # Add aliases for primitive types not supported by JSON-WSP.
+        typedefs.update({
+            '_DateTime' : {'rfc3339': 'string'},
+            '_Exception': {'code': 'string',
+                           'string': 'string',
+                           'detail': 'string',},
+        })
+
+        desc_obj = {
+            "type": "jsonwsp/description",
+            "version": "1.0",
+            "servicename": service_name,
+            "url": self.env.abs_href(self.url(controller='jsonwsp',
+                                              service=service_name,
+                                              action='call',)),
+            "types": typedefs,
+            'methods': {
+                methnm: {
+                    'doc_lines': sigdef.get('doc', '').splitlines(),
+                    'params': {
+                        p['name']: self._jsonwsp_paramdef(
+                            p, f'arg {methnm}.{p["name"]}'
+                        ) for p in sigdef['params']},
+                    'ret_info': self._jsonwsp_paramdef(
+                        sigdef['return'], f'{methnm} return'
+                    ),
+                }
+                for methnm, sigdef in description['methods'].items()
+            },
+        }
+        try:  # JSON encoding
+            response = json.dumps(desc_obj, cls=TracJsonWspEncoder)
+            writer.write(response.encode('utf-8'))
+        except Exception as e:
+            raise exc.RpcEncodingException(e,
+                                           title='server',
+                                           proto_id=self.RPC_ID)
 
     # Internal methods
 
+    def _jsonwsp_paramdef(self, paramdef, reason=None):
+        if reason is None:
+            reason = f'arg {paramdef["name"]}' \
+                         if 'name' in paramdef else \
+                     'return'
+        p = {'type': self._jsonwsp_typedef(reason,
+                                           paramdef['type']),
+             'doc_lines': (),} # TODO: Param docs ?
+        def_order = paramdef.get('def_order')
+        if def_order is not None:
+            p['def_order'] = def_order
+        opt = paramdef.get('optional')
+        if opt is not None:
+            p['optional'] = opt
+        doc = paramdef.get('doc')
+        if doc is not None:
+            p['doc_lines'] = doc.splitlines()
+        return p
+
+    TYPE_NAMES = {str: 'string',
+                  bool: 'number', # 0 or 1
+                  int: 'integer',
+                  float: 'float',
+                  object: 'any',
+                  datetime: '_DateTime',
+                  Binary: 'attachment'}
+
+    def _jsonwsp_multitype(self, typedef):
+        # FIXME: Translate types and merge
+        return 'any'
+
+    def _jsonwsp_typedef(self, what, typedef):
+        if typedef is None:
+            raise exc.ServerConfigException(
+                f'Missing typedef for {what}',
+                title='', proto_id=self.RPC_ID
+            )
+        if isinstance(typedef, str):
+            return typedef
+        if isinstance(typedef, type):
+            typenm = self.TYPE_NAMES.get(typedef)
+            if typenm is not None:
+                return typenm
+            if typedef == list:
+                # FIXME: Figure out how to describe list of anything
+                return ["string"]
+            if typedef == dict:
+                # FIXME: Figure out how to describe dict of anything
+                return {}
+            if typedef is Exception:
+                return '_Exception'
+            raise exc.ServerConfigException(
+                f'Unsupported type {typedef.__name__}',
+                title='', proto_id=self.RPC_ID
+            )
+        if isinstance(typedef, set):
+            # Option type
+            return self._jsonwsp_multitype(typedef)
+        gtype, base_type = typedef
+        if gtype == list:
+            return [self._jsonwsp_typedef(what, base_type)]
+        if gtype == dict:
+            return {member: self._jsonwsp_typedef(what, field_type)
+                    for member, field_type in base_type.items()}
+        if gtype == tuple:
+            return {member: self._jsonwsp_typedef(what, field_type)
+                    for member, field_type in base_type}
+        raise exc.ServerConfigException(
+            f'Unexpected type {typedef} for {what}',
+            title='', proto_id=self.RPC_ID
+        )
+
     def _check_version(self, version):
+        # FIXME: Multiple versions ?
         return version == '1.0'
 
     def _send_response(self, req, response, content_type='application/json'):
