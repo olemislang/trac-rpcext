@@ -144,12 +144,14 @@ class JsonWspProtocol(Component):
 
     RPC_PROTO = 'JSON-WSP'
     RPC_ID = 'jsonwsp'
+    RPC_CONTENT_TYPE = 'application/x-jsonwsp'
+    WS_CONTENT_TYPE  = 'application/json'
 
     def rpc_info(self):
         return self.RPC_PROTO, gettext(self._descritpion)
 
     def rpc_match(self):
-        yield 'rpc', 'application/x-jsonwsp'
+        yield 'rpc', self.WS_CONTENT_TYPE
 
     def parse_rpc_request(self, req, content_type):
         """Parse JSON-WSP requests"""
@@ -284,10 +286,10 @@ class JsonWspProtocol(Component):
         self.url = url
         mapper.connect('jsonwsp_call', '/{service}/jsonwsp',
                        controller='jsonwsp', action='call',
-                       content_type='application/json',)
+                       content_type=self.WS_CONTENT_TYPE,)
         mapper.connect('jsonwsp_desc', '/{service}/jsonwsp/description',
                        controller='jsonwsp', action='describe',
-                       content_type='application/json', idl='jsonwsp',)
+                       idl='jsonwsp',)
         return {'idl': ('jsonwsp',),
                 'ctlid': 'jsonwsp',}
 
@@ -295,7 +297,7 @@ class JsonWspProtocol(Component):
         """Add HTTP headers in JSON-WSP service description response.
         """
         if lang_id == 'jsonwsp':
-            req.send_header('Content-Type', 'application/json; charset=utf-8')
+            req.send_header('Content-Type', f'{self.WS_CONTENT_TYPE} charset=utf-8')
 
     def encode_ws_idl(self, description, lang_id, writer):
         """Encode service meta-data in JSON-WSP description language.
@@ -320,7 +322,8 @@ class JsonWspProtocol(Component):
             "servicename": service_name,
             "url": self.env.abs_href(self.url(controller='jsonwsp',
                                               service=service_name,
-                                              action='call',)),
+                                              action='call',
+                                              content_type=self.WS_CONTENT_TYPE,)),
             "types": typedefs,
             'methods': {
                 methnm: {
