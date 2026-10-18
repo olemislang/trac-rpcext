@@ -26,6 +26,7 @@ License: Apache License 2.0
 import sys
 import unittest
 
+from tracrpc import api
 from tracrpc.tests import makeSuite, TracRpcTestCase
 
 from pyhessian import encoder, protocol
@@ -123,6 +124,10 @@ class ProtocolProviderTestCase(TracRpcTestCase):
 
 
 class PyHessianApiTestCase(PyHessianTestCase):
+
+  def test_api_version(self):
+    result = getattr(self.user, 'system.getAPIVersion')()
+    self.assertEqual(list(api.api_version), resp.result)
 
   def test_multicall(self):
     params = [
