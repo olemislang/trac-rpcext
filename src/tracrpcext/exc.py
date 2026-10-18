@@ -134,37 +134,33 @@ def to_rpc_error(e):
   if isinstance(e, api.MethodNotFound):
     # FIXME : Choose title from type => str mapping
     return NoSuchMethodException(
-      e, title='client', show_traceback=False
+      e, title='client'
     )
   if isinstance(e, api.ResourceNotFound):
     return NoSuchObjectException(
-      e, title='client', show_traceback=False
+      e, title='client'
     )
   if isinstance(e, api.ProtocolException):
     # Replace
     return ProtocolException(
       e._exc if e._exc is not None else e.message,
       title=e.title,
-      show_traceback=e.show_traceback
     )
   if isinstance(e, api.ServiceException):
     # Replace
     return ServiceException(
       e._exc if e._exc is not None else e.message,
       title=e.title,
-      show_traceback=e.show_traceback
     )
   if isinstance(e, PermissionError):
     # Wrap and keep inner exception fields
     return RequireHeaderException(
-      e, title=e.title, show_traceback=e.show_traceback
+      e, title=e.title
     )
   if isinstance(e, TracError):
     # Wrap and keep inner exception fields
     return RpcServerError(
-      e, title=e.title, show_traceback=e.show_traceback
+      e, title=e.title
     )
-  return RpcServerError(e, title='server',
-                        show_traceback=False)
+  return RpcServerError(e, title='server')
                        
-
