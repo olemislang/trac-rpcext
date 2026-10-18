@@ -27,6 +27,7 @@ import copy
 import sys
 import unittest
 
+from tracrpc import api
 from tracrpc.tests import makeSuite, TracRpcTestCase, TracRpcTestSuite
 
 from tracrpcext._amf import AMFProtocol
@@ -53,6 +54,11 @@ class ProtocolProviderTestCase(TracRpcTestCase):
 
 
 class Py3AMFApiTestCase(Py3AMFTestCase):
+
+  def test_api_version(self):
+    rpc_sys = self.user.getService('system')
+    result = rpc_sys.getAPIVersion()
+    self.assertEqual(list(api.api_version), result)
 
   def test_multicall(self):
     params = [
