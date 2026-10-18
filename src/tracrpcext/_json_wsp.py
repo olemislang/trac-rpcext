@@ -183,7 +183,8 @@ class JsonWspProtocol(Component):
             params = data.get('args', {})
             if method_name == 'system.multicall':
                 # Prepare for multicall
-                self.log.debug(f"RPC({self.PROTO_ID}) Multicall request %s", data)
+                self.log.debug(f"RPC({self.RPC_ID}) Multicall request by %s %s",
+                               req.authname, data)
                 nparams = len(params)
                 if nparams == 0:
                     raise exc.ContractViolation(
@@ -192,7 +193,7 @@ class JsonWspProtocol(Component):
                         proto_id=self.PROTO_ID
                     )
                 elif nparams > 1:
-                    arg_names = params.keys()
+                    arg_names = iter(params.keys())
                     argnm = next(arg_names)
                     if argnm == 'signatures':
                         argnm = next(arg_names)
@@ -200,7 +201,7 @@ class JsonWspProtocol(Component):
                         methodname, argnm, title='client',
                         proto_id=self.RPC_ID
                     )
-                for signature in params,get('signatures'):
+                for signature in params.get('signatures') or [[]]:
                     signature.setdefault('methodName',
                                          signature.get('methodname', ''))
                     signature.setdefault('params',
@@ -234,14 +235,19 @@ class JsonWspProtocol(Component):
         """Send JSON-RPC response back to the caller."""
         rpcreq = req.rpc
         mirror = rpcreq.get('mirror')
+        r_id = None
+        if mirror is not None:
+            r_id = mirror.get('id')
         try:
             if rpcreq.get('method') == 'system.multicall':
                 # Custom multicall
                 args = (rpcreq.get('params') or [[]])[0]
-                mcresults = [self._json_result(
-                    sig,
-                    value if isinstance(value, Exception) else value[0],
-                    sig.get('mirror') or mirror
+                mcresults = [util.multicall_result(
+                    to_rpc_error(value)
+                        if isinstance(value, Exception) else
+                    value[0],
+                    r_id=sig.get('id') or r_id,
+                    log=self.log,
                 ) for sig, value in izip(args, result)]
 
                 response = self._json_result(rpcreq, mcresults, mirror)
