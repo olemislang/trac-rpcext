@@ -23,16 +23,17 @@ Licensed under the Apache version 2 License
 """
 __author__ = 'Olemis Lang'
 
+from multipart import header_quote
 from io import BytesIO
 from shutil import copyfileobj
 
 from trac.api import IEnvironmentSetupParticipant
 from trac.core import Component, ExtensionPoint, implements
-from trac.web.api import IRequestHandler, RequestDone
+from trac.web.api import IRequestHandler, RequestDone, parse_header
 
 from tracrpc.web_ui import RPCWeb
 
-from . import api, ws
+from . import api, util, ws
 
 from routes import Mapper
 
@@ -114,8 +115,12 @@ class WebServicesModule(Component):
                     ), title='', proto_id=proto_id
                 )
             if action == 'call':
-                newreq = self._rewrite_ws_call(req)
-                RPCWeb(self.env).process_request(newreq)
+                newreq = self._rewrite_ws_call(req, protocol, service_name)
+                try:
+                    RPCWeb(self.env).process_request(newreq)
+                except Exception as e:
+                    # FIXME : Handle rewrite errors
+                    raise
             elif action == 'describe':
                 lang_id = r.get('idl')
                 if lang_id is None:
@@ -162,14 +167,38 @@ class WebServicesModule(Component):
                                           'path_info',)
                        })
             r = self.mapper.match('/' + r['path_info'])
+            if r is None:
+                return None
         r.update(acc)
         return r
 
-    def _rewrite_ws_call(self, req):
+    def _rewrite_ws_call(self, req, protocol, service_name):
         """Rewrite parsed web service invocation request for RPC system.
         """
-        # TODO: Implement
-        raise NotImplementedError('_reerite_ws_call')
+        rpc_path, content_type = next(iter(protocol.rpc_match()))
+        rpc_path = '/' + rpc_path
+
+        _, options = parse_header(req.get_header('Content-Type'))
+        if options:
+            content_type += '; ' +  + '; '.join(
+                nm + '=' + header_quote(v) for nm, v in options.items()
+            )
+
+        newenv = req.environ.copy()
+        newenv['PATH_INFO'] = rpc_path
+        if 'CONTENT_TYPE' in newenv:
+            newenv['CONTENT_TYPE'] = content_type
+        if 'HTTP_CONTENT_TYPE' in newenv:
+            newenv['HTTP_CONTENT_TYPE'] = content_type
+        # Service name
+        newenv['tracrpc.service'] = service_name
+        # Protocol provider
+        newreq = req.__class__(newenv, req._start_response)
+        newenv['tracrpc.protocol'] = newreq.args['protocol'] = protocol
+        # Update callbacks
+        for k, v in req.callbacks.items():
+            newreq.callbacks.setdefault(k, v)
+        return newreq
 
     def _send_description(self, req, protocol, lang_id, stream, clen):
         req.send_response(200)
