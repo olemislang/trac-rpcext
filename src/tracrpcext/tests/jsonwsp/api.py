@@ -56,7 +56,7 @@ class JsonWspApiTestCase(JsonWspTestCase):
   def test_api_version(self):
     ws_sys = self.anon.service('system')
     resp = ws_sys.getAPIVersion()
-    self.assertEqual(api.api_version, resp.result)
+    self.assertEqual(list(api.api_version), resp.result)
 
 
 def test_suite():
