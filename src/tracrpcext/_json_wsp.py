@@ -30,6 +30,7 @@ __author__ = 'Olemis Lang'
 from datetime import datetime
 import io
 import json
+import os
 
 try:
     import babel
@@ -43,6 +44,7 @@ from trac.util.text import empty, exception_to_unicode, to_unicode
 from trac.web.api import RequestDone
 
 from tracrpc.api import IRPCProtocol, Binary, MethodNotFound, ProtocolException
+from tracrpc.json_rpc import json_load
 from tracrpc.util import cleandoc_, gettext, unicode, izip
 
 from . import api, exc, util
@@ -140,18 +142,18 @@ class JsonWspProtocol(Component):
 
     implements(api.IWebServiceProtocol)
 
-    # IRPCProtocol methods
-
     RPC_PROTO = 'JSON-WSP'
     RPC_ID = 'jsonwsp'
     RPC_CONTENT_TYPE = 'application/x-jsonwsp'
     WS_CONTENT_TYPE  = 'application/json'
 
+    # IRPCProtocol methods
+
     def rpc_info(self):
         return self.RPC_PROTO, gettext(self._descritpion)
 
     def rpc_match(self):
-        yield 'rpc', self.WS_CONTENT_TYPE
+        yield 'rpc', self.RPC_CONTENT_TYPE
 
     def parse_rpc_request(self, req, content_type):
         """Parse JSON-WSP requests"""
@@ -163,11 +165,11 @@ class JsonWspProtocol(Component):
                              exception_to_unicode(e))
             raise ProtocolException(e)
 
-        version = data.get('version').strip()
+        version = data.get('version', '').strip()
         if not self._check_version(version):
             raise exc.RPCVersionException(f'Unsupported version {version}',
                                           title='incompatible',
-                                          proto_id=self.PROTO_ID)
+                                          proto_id=self.RPC_ID)
 
         self.log.info(f"RPC({self.PROTO_ID}) JSON-WSP mirror : %s.",
                       repr(data.get('mirror')))
@@ -274,7 +276,7 @@ class JsonWspProtocol(Component):
         """Send a JSON-RPC fault message back to the caller. """
         rpcreq = req.rpc
         mirror = rpcreq.get('mirror')
-        response = json.dumps(self._json_error(rpcreq, e, r_id=r_id),
+        response = json.dumps(self._json_error(rpcreq, e, mirror=mirror),
                               cls=TracJsonWspEncoder)
         self._send_response(req, response + '\n', rpcreq['mimetype'])
 
@@ -451,20 +453,22 @@ class JsonWspProtocol(Component):
         else:
             return self._json_error(result, r_id=r_id)
 
-    def _json_error(self, rpcreq, exc, mirror=None):
+    def _json_error(self, rpcreq, e, mirror=None):
         """ Makes a response dictionary that is an error. """
-        e = util.to_rpc_error(exc)
+        _e = exc.to_rpc_error(e)
         # Ensure there is a reference to ID in the log
-        stack_trace = type(exc), exc, exc.__traceback__
+        stack_trace = type(e), e, e.__traceback__
         util.logging.rpcerror(self.log,
-                              f'{e.details}|n|n{e.message}',
+                              f'{_e.details}|n|n{_e.message}',
                               exc_info=stack_trace)
-        fault = {'code': getattr(e.title) or 'server',
-                 'string': to_unicode(e),
-                 'detail': e.details}
+        fault = {'code': _e.title or 'server',
+                 'string': to_unicode(_e),
+                  "filename": '_json_wsp.py',
+                 'lineno': 0,
+                 'detail': _e.details}
         resp = {"type": "jsonwsp/fault",
                 "version": "1.0",
-                "fault": fault}
+                "fault": fault,}
         if mirror is not None:
             resp['reflection'] = mirror
         return resp
