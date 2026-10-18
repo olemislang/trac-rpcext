@@ -165,32 +165,29 @@ class JsonWspProtocol(Component):
                              exception_to_unicode(e))
             raise ProtocolException(e)
 
-        version = data.get('version', '').strip()
+        version = data.get('version', '1.0').strip()
         if not self._check_version(version):
             raise exc.RPCVersionException(f'Unsupported version {version}',
                                           title='incompatible',
                                           proto_id=self.RPC_ID)
 
-        self.log.info(f"RPC({self.PROTO_ID}) JSON-WSP mirror : %s.",
+        self.log.info(f"RPC({self.RPC_ID}) JSON-WSP mirror : %s.",
                       repr(data.get('mirror')))
         try:
-            methodname = data['methodname']
+            methnm = data['methodname']
         except KeyError as e:
             raise ProtocolException('Missing RPC method name')
         try:
-            if '.' not in methodname:
-                # Includes only last mile, try finding service name
-                service_name = data.get('servicename')
-                if service_name is not None:
-                    method_name = service_name + '.' + method_name 
-            if methodname == 'system.multicall':
+            service_name = req.environ.get('tracrpc.service', '')
+            method_name = service_name + '.' + methnm 
+            params = data.get('args', {})
+            if method_name == 'system.multicall':
                 # Prepare for multicall
                 self.log.debug(f"RPC({self.PROTO_ID}) Multicall request %s", data)
-                params = data.get('args', {})
                 nparams = len(params)
                 if nparams == 0:
                     raise exc.ContractViolation(
-                        'Missing required argument',
+                        'Missing required argument "signatures"',
                         title='client',
                         proto_id=self.PROTO_ID
                     )
@@ -212,21 +209,21 @@ class JsonWspProtocol(Component):
             else:
                 try:
                     data['params'] = util.parse_rpc_kwargs(
-                        self.env, methodname, params
+                        self.env, method_name, params
                     )
                 except RuntimeError as e:
                     raise ServiceException(e)
                 except KeyError as e:
                     raise exc.ContractViolation(
-                        f"{methodname}() missing required positional argument: '{e.args[0]}'",
+                        f"{method_name}() missing required positional argument: '{e.args[0]}'",
                         title='client', proto_id=self.RPC_ID,
                     )
                 except NameError as e:
                     raise exc.InvalidArgument(
-                        methodname, e.args[0], title='client',
+                        method_name, e.args[0], title='client',
                         proto_id=self.RPC_ID
                     )
-            data['method'] = data['methodname']
+            data['method'] = method_name
             return data
         except RPCError:
             raise
