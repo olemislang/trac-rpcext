@@ -443,6 +443,41 @@ class WebServiceSystemTestCase(EnvTestCase):
             }
         }, desc['methods']['wikiToHtml'])
 
+    def test_desc_ticket(self):
+        desc = self.ws.generate_service_desc('ticket')
+        self.assertIn('name', desc)
+        self.assertIn('methods', desc)
+        self.assertIn('types', desc)
+
+        self.assertEqual('ticket', desc['name'])
+        self.assertEqual({'query',
+                          'getRecentChanges',
+                          'getAvailableActions',
+                          'getActions',
+                          'get',
+                          'create',
+                          'update',
+                          'delete',
+                          'changeLog',
+                          'listAttachments',
+                          'getAttachment',
+                          'putAttachment',
+                          'deleteAttachment',
+                          'getTicketFields',
+                         }, set(desc['methods'].keys()))
+        # ticket.delete
+        self.assertMethodDescMatch({
+            'params': [{
+                'name': 'id',
+                'def_order': 1,
+                'type': int,
+                'optional': False,
+            }],
+            'return': {
+                'type': type(None),
+            }
+        }, desc['methods']['delete'])
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
