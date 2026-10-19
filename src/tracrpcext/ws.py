@@ -350,7 +350,7 @@ class WebServiceSystem(Component):
             # Return value
             (list, 'WikiPageInfo'),
             # Args
-            None
+            None,
         ),
         'wiki.getAllPages': (
             # Return value
@@ -369,23 +369,25 @@ class WebServiceSystem(Component):
             # Args
             None, None,
         ),
-        'listAttachments': (
+        'wiki.putPage': (
+            # Return value
+            None,
+            # Args
+            None,
+            None,
+            'WikiPageAttrs',
+        ),
+        'wiki.listAttachments': (
             # Return value
             (list, str),
             # Args
             None,
         ),
-        '': (
+        'wiki.listLinks': (
             # Return value
+            (list, str),
             # Args
-        ),
-        '': (
-            # Return value
-            # Args
-        ),
-        '': (
-            # Return value
-            # Args
+            None,
         ),
     }
 
@@ -417,12 +419,15 @@ class WebServiceSystem(Component):
                 ws_desc = {'name': service_name,
                            'types': ws_hints.get('typedefs'),
                            'methods': {
-                               c.__name__ : self._describe_method(
+                               method_name: self._describe_method(
                                    provider, sigs, c,
                                    ws_hints['sigdefs'].get(
-                                       service_name + '.' + c.__name__,
-                                   )
-                               ) for _, sigs, c in provider.xmlrpc_methods()}
+                                       service_name + '.' + method_name),
+                                   method_name,
+                               ) for _, sigs, c, method_name in (
+                                   md + (md[2].__name__,) if len(md) == 3 else md
+                                    for md in provider.xmlrpc_methods())
+                           }
                           }
                 return ws_desc
         else:
@@ -451,14 +456,17 @@ class WebServiceSystem(Component):
         else:
             return self.typedefs[typenm]
 
-    def _describe_method(self, provider, sigs, c, method_hints):
+    def _describe_method(self, provider, sigs, c, method_hints,
+                         method_name=None):
         """Generate method description.
 
         provider:       Component declaring RPC method;
         sigs:           Method signatures;
         c:              Callable object encapsulating service logic.
         method_hints:   Type hints
+        method_name:    RPC method name
         """
+        method_name = method_name or c.__name__
         long_sig = small_sig = ()
         # FIXME: Any signature with more than 99999 params ?
         small_len = 99999
@@ -467,12 +475,12 @@ class WebServiceSystem(Component):
             l = len(s)
             if l >= long_len:
                 long_len, long_sig = l, s
-            elif l <= small_len:
+            if l <= small_len:
                 small_len, small_sig = l, s
 
-        def _describe_param(sigtype, param_hint, param=None,
-                            i=None, opt=None):
-            primitive = (int, str, datetime, Binary)
+        def _describe_param(sigtype, param_hint, param=None, i=None,
+                            opt=None, service=None, method=None):
+            primitive = (bool, int, str, datetime, Binary)
             param_type = None
             if sigtype in primitive:
                 param_type = sigtype
@@ -484,17 +492,28 @@ class WebServiceSystem(Component):
                 param_type = param_hint
             else:
                 # Generics and struct
-                gtype, base_type = param_hint
+                try:
+                    gtype, base_type = param_hint
+                except TypeError:
+                    raise exc.ServerConfigException(
+                        f'Unknown type hint {param_hint}',
+                        title='',
+                    )
                 if (sigtype, gtype) not in {
                     (dict, dict),
                     (list, list),
                     (list, tuple),
                 }:
-                    nm = '' if param is None else param.name
-                    raise exc.ServerConfigException(
-                        f'Type mismatch for {nm} RPC {sigtype} WS {gtype}',
-                        title='',
-                    )
+                    # FIXME : Patch errors in XmlRpcPlugin method signatures
+                    ns = provider.xmlrpc_namespace()
+                    if (ns, method_name, sigtype, gtype) not in (
+                        ('wiki', 'getRecentChanges', dict, list),
+                    ):
+                        nm = '<return>' if param is None else param.name
+                        raise exc.ServerConfigException(
+                            f'Type mismatch for {nm} RPC {sigtype} WS {gtype}',
+                            title='',
+                        )
                 param_type = param_hint
             param_desc = {'type': param_type,
                           'doc': None,}
@@ -521,7 +540,8 @@ class WebServiceSystem(Component):
             yield p
             yield from _params
 
-        method_sig = {'params': [_describe_param(sigtype, hint, p, i, i >= small_len)
+        method_sig = {'params': [_describe_param(sigtype, hint, p, i,
+                                                 i >= small_len)
                                  for i, (sigtype, hint, p) in enumerate(
                                      zip_longest(
                                          long_sig[1:],
