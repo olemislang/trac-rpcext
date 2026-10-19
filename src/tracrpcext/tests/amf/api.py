@@ -166,11 +166,11 @@ class Py3AMFApiTestCase(Py3AMFTestCase):
     self._revoke_perm('anonymous', 'XML_RPC')
     try:
       rpc_sys = self.anon.getService('system')
-      rpc_sys.listMethods()
+      methods = rpc_sys.listMethods()
     except RemotingError as e:
       self.assertIn('XML_RPC', str(e))
     else:
-      self.fail('AMF fault not raised')
+      self.fail(f'AMF fault not raised. Returned {methods}')
     finally:
       self._grant_perm('anonymous', 'XML_RPC')
 
