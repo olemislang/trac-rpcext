@@ -33,6 +33,7 @@ from tracrpcext._json_wsp import JsonWspProtocol
 from ..util import TracRpcProtocolTestSuite
 from . import JsonWspTestCase
 
+from jsonwspclient.jsonwspexceptions import JsonWspFault
 
 class JsonWspProviderTestCase(TracRpcTestCase):
     def setUp(self):
@@ -108,6 +109,19 @@ class JsonWspApiTestCase(JsonWspTestCase):
     )
     self.assertIsInstance(rv, bytes)
     self.assertEqual(content, rv)
+
+  def test_xmlrpc_permission(self):
+    # Test returned response if not XML_RPC permission
+    self._revoke_perm('anonymous', 'XML_RPC')
+    try:
+      ws_sys = self.anon.service('system')
+      methods = ws_sys.listMethods()
+    except JsonWspFault as e:
+      self.assertIn('XML_RPC', str(e))
+    else:
+      self.fail(f'Exception not raised. Returned {methods}')
+    finally:
+      self._grant_perm('anonymous', 'XML_RPC')
 
 
 def test_suite():

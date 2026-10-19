@@ -136,7 +136,7 @@ def to_rpc_error(e):
     return NoSuchMethodException(
       e, title='client'
     )
-  if isinstance(e, api.ResourceNotFound):
+  if isinstance(e, ResourceNotFound):
     return NoSuchObjectException(
       e, title='client'
     )
