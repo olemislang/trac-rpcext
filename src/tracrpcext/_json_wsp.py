@@ -375,7 +375,8 @@ class JsonWspProtocol(Component):
 
     TYPE_NAMES = {str: 'string',
                   bool: 'number', # 0 or 1
-                  int: 'integer',
+                  int: 'number',
+                  type(None): 'number', # always 0
                   float: 'float',
                   object: 'any',
                   datetime: '_DateTime',
