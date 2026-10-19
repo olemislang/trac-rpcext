@@ -52,7 +52,7 @@ class JsonWspProviderTestCase(TracRpcTestCase):
 
 
 class JsonWspApiTestCase(JsonWspTestCase):
-  jsonwsp_services = ('system', 'wiki',)
+  jsonwsp_services = ('system', 'ticket', 'wiki',)
 
   def test_api_version(self):
     ws_sys = self.anon.service('system')
@@ -143,6 +143,31 @@ class JsonWspApiTestCase(JsonWspTestCase):
         'listMethods() takes exactly 2 arguments' 
           if sys.version_info[0] == 2 else
         'listMethods() takes 2 positional arguments but 3 were given',
+        e.args[0]
+      )
+    else:
+      self.fail('JSON-WSP fault not raised')
+
+  def test_resource_not_found(self):
+    # A Ticket resource
+    try:
+      ws_tckt = self.admin.service('ticket')
+      ws_tckt.get(2147483647)
+    except JsonWspFault as e:
+      self.assertEqual(
+        'Ticket 2147483647 does not exist.',
+        e.args[0]
+      )
+    else:
+      self.fail('JSON-WSP fault not raised')
+
+    # A Wiki resource
+    try:
+      ws_wiki = self.admin.service('wiki')
+      ws_wiki.getPage("Test", 10)
+    except JsonWspFault as e:
+      self.assertEqual(
+        'Wiki page "Test" does not exist at version 10',
         e.args[0]
       )
     else:
