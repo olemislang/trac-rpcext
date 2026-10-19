@@ -46,12 +46,12 @@ class JsonWspWikiTestCase(JsonWspTestCase):
     # Create attachment
     ws_wiki = self.admin.service('wiki')
 
-    ws_wiki.putPage('TestAmf/Attachments', 'content', {})
+    ws_wiki.putPage('TestJsonWsp/Attachments', 'content', {})
     ws_wiki.putAttachmentEx(
-      'TestAmf/Attachments', 'feed2.png', 'test image',
+      'TestJsonWsp/Attachments', 'feed2.png', 'test image',
       self.image_in
     )
-    rv = ws_wiki.getAttachment(f'TestAmf/Attachments/feed2.png')
+    rv = ws_wiki.getAttachment(f'TestJsonWsp/Attachments/feed2.png')
     self.assertEqual(
       self.image_in,
       rv.getvalue()
@@ -59,10 +59,10 @@ class JsonWspWikiTestCase(JsonWspTestCase):
 
     # Update attachment (adding new)
     ws_wiki.putAttachmentEx(
-      'TestAmf/Attachments', 'feed2.png', 'test image',
+      'TestJsonWsp/Attachments', 'feed2.png', 'test image',
       self.image_in, False
     )
-    rv = ws_wiki.getAttachment(f'TestAmf/Attachments/feed2.2.png')
+    rv = ws_wiki.getAttachment(f'TestJsonWsp/Attachments/feed2.2.png')
     self.assertEqual(
       self.image_in,
       rv.getvalue()
@@ -70,17 +70,18 @@ class JsonWspWikiTestCase(JsonWspTestCase):
 
     # List attachments
     self.assertEqual(
-      [f'TestAmf/Attachments/feed2.2.png', f'TestAmf/Attachments/feed2.png'],
+      [f'TestJsonWsp/Attachments/feed2.2.png',
+       f'TestJsonWsp/Attachments/feed2.png'],
       sorted(
-        ws_wiki.listAttachments('TestAmf/Attachments')
+        ws_wiki.listAttachments('TestJsonWsp/Attachments')
     ))
     # Delete both attachments
-    ws_wiki.deleteAttachment(f'TestAmf/Attachments/feed2.png')
-    ws_wiki.deleteAttachment(f'TestAmf/Attachments/feed2.2.png')
+    ws_wiki.deleteAttachment(f'TestJsonWsp/Attachments/feed2.png')
+    ws_wiki.deleteAttachment(f'TestJsonWsp/Attachments/feed2.2.png')
     # List attachments again
     self.assertEqual(
       [],
-      ws_wiki.listAttachments('TestAmf/Attachments')
+      ws_wiki.listAttachments('TestJsonWsp/Attachments')
     )
 
 
