@@ -135,6 +135,19 @@ class JsonWspApiTestCase(JsonWspTestCase):
     else:
       self.fail('JSON-WSP fault not raised')
 
+  def test_wrong_argspec(self):
+    try:
+      ws_sys = self.admin.service('system').listMethods("hello")
+    except TypeError as e:
+      self.assertIn(
+        'listMethods() takes exactly 2 arguments' 
+          if sys.version_info[0] == 2 else
+        'listMethods() takes 2 positional arguments but 3 were given',
+        e.args[0]
+      )
+    else:
+      self.fail('JSON-WSP fault not raised')
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
