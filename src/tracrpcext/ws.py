@@ -226,6 +226,12 @@ class WebServiceSystem(Component):
             # Args
             None,
         ),
+        'ticket.getAvailableActions': (
+            # Return value
+            (list, 'TicketAction'),
+            # Args
+            None,
+        ),
         'ticket.getActions': (
             # Return value
             (list, 'TicketAction'),
@@ -392,8 +398,8 @@ class WebServiceSystem(Component):
     }
 
     def detail_signatures(self, ns):
-        ns_sigs = {x: self.sigdefs[x]
-                   for x in self.sigdefs
+        ns_sigs = {x: v
+                   for x, v in self.sigdefs.items()
                    if x.startswith(ns) and '.' not in x[len(ns)+1:]}
         # FIXME : Return only typedefs needed by RPC namespace
         ns_typenms = chain(self.typedefs.keys(), ('TicketAttrs',))
@@ -484,6 +490,9 @@ class WebServiceSystem(Component):
             param_type = None
             if sigtype in primitive:
                 param_type = sigtype
+            elif sigtype is None:
+                # No type differs from None as result
+                param_type = type(None)
             elif param_hint is None:
                 # No hints for complex type
                 param_type = (sigtype, None)
@@ -508,6 +517,7 @@ class WebServiceSystem(Component):
                     ns = provider.xmlrpc_namespace()
                     if (ns, method_name, sigtype, gtype) not in (
                         ('wiki', 'getRecentChanges', dict, list),
+                        ('ticket', 'changeLog', dict, list),
                     ):
                         nm = '<return>' if param is None else param.name
                         raise exc.ServerConfigException(
