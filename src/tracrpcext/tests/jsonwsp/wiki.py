@@ -84,6 +84,20 @@ class JsonWspWikiTestCase(JsonWspTestCase):
       ws_wiki.listAttachments('TestJsonWsp/Attachments')
     )
 
+  def test_getRecentChanges(self):
+    ws_wiki = self.admin.service('wiki')
+    ws_wiki.putPage('TestAmf/WikiOne', 'content one', {})
+    time.sleep(1)
+    ws_wiki.putPage('TestAmf/WikiTwo', 'content two', {})
+    attrs2 = ws_wiki.getPageInfo('TestAmf/WikiTwo')
+    changes = ws_wiki.getRecentChanges(attrs2['lastModified'])
+    self.assertEqual(1, len(changes))
+    self.assertEqual('TestAmf/WikiTwo', changes[0]['name'])
+    self.assertEqual('admin', changes[0]['author'])
+    self.assertEqual(1, changes[0]['version'])
+    ws_wiki.deletePage('TestAmf/WikiOne')
+    ws_wiki.deletePage('TestAmf/WikiTwo')
+
 
 def test_suite():
   suite = TracRpcProtocolTestSuite()
