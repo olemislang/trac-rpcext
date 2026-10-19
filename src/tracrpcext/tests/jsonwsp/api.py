@@ -123,6 +123,18 @@ class JsonWspApiTestCase(JsonWspTestCase):
     finally:
       self._grant_perm('anonymous', 'XML_RPC')
 
+  def test_method_not_found(self):
+    try:
+      ws_sys = self.admin.service('system')
+      ws_sys.doesNotExist()
+    except KeyError as e:
+      self.assertEqual(
+        'doesNotExist',
+        e.args[0]
+      )
+    else:
+      self.fail('JSON-WSP fault not raised')
+
 
 def test_suite():
     suite = TracRpcProtocolTestSuite()
