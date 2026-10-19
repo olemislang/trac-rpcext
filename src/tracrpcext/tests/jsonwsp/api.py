@@ -51,7 +51,7 @@ class JsonWspProviderTestCase(TracRpcTestCase):
 
 
 class JsonWspApiTestCase(JsonWspTestCase):
-  jsonwsp_services = ('system',)
+  jsonwsp_services = ('system', 'wiki',)
 
   def test_api_version(self):
     ws_sys = self.anon.service('system')
@@ -87,6 +87,27 @@ class JsonWspApiTestCase(JsonWspTestCase):
     self.assertEqual('MethodNotFound', result[3]['name'])
     self.assertRegex('RPC method "nonexisting" not found',
                      result[3].message)
+
+  def test_large_file(self):
+    pagename = 'TestAmf/LargeJsonrpc'
+    filename = 'large.dat'
+    ws_wiki = self.admin.service('wiki')
+    rv = ws_wiki.putPage(
+      pagename, 'attachment:' + filename, {}
+    )
+    self.assertEqual(True, rv)
+
+    content = bytes(bytearray(range(256))) * 4 * 1024 * 4  # 4 MB
+    rv = ws_wiki.putAttachmentEx(
+      pagename, filename, 'Large file', content
+    )
+    self.assertEqual(filename, rv)
+
+    rv = ws_wiki.getAttachment(
+      '%s/%s' % (pagename, filename)
+    )
+    self.assertIsInstance(rv, bytes)
+    self.assertEqual(content, rv)
 
 
 def test_suite():
