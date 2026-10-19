@@ -33,8 +33,6 @@ from tracrpc.util import unicode, xmlrpclib
 from tracrpc.tests import Request, b64encode, urlopen, makeSuite
 from tracrpc.tests.ticket import RpcTicketTestCase
 
-from tracrpcext._hessian import HessianProtocol
-
 from ..util import TracRpcProtocolTestSuite
 from . import Py3AMFTestCase
 
