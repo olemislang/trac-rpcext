@@ -25,6 +25,8 @@ License: Apache License 2.0
 
 __all__ = ()
 
+import logging
+
 from tracrpc.tests import TracRpcTestCase 
 
 from ..util import TracRpcProtocolTestSuite
@@ -71,6 +73,9 @@ class JsonWspTestCase(TracRpcTestCase):
   jsonwsp_services = ()
 
   def setUp(self):
+    log = logging.getLogger('jsonwspclient')
+    # Silence jsonwspclient logging
+    log.setLevel(logging.FATAL)
     TracRpcTestCase.setUp(self)
     kwargs = {'services': self.jsonwsp_services,
               'raise_for_fault': True,}
