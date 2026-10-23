@@ -465,7 +465,15 @@ class JsonWspProtocol(Component):
         util.logging.rpcerror(self.log,
                               f'{_e.details}|n|n{_e.message}',
                               exc_info=stack_trace)
-        fault = {'code': _e.title or 'server',
+        code = _e.title
+        if code not in {'client', 'server', 'incompatible'}:
+            if isinstance(_e, exc.RPCVersionException):
+                code = 'incompatible'
+            elif isinstance(_e, exc.RpcClientError):
+                code = 'client'
+            else:
+                code = 'server'
+        fault = {'code': code,
                  'string': to_unicode(_e),
                   "filename": '_json_wsp.py',
                  'lineno': 0,
