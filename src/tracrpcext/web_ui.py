@@ -160,9 +160,9 @@ class WebServicesModule(Component):
             return None
         acc = {}
         while [r.get(k)
-               for k in ('controller', 'action')] == ('sys', 'match'):
+               for k in ('controller', 'action')] == ['sys', 'match']:
             # Accumulate variable values
-            acc.update({k: v for k.v in r.iteritems()
+            acc.update({k: v for k,v in r.items()
                              if k not in ('controller', 'action',
                                           'path_info',)
                        })

@@ -166,14 +166,15 @@ class JsonWspProtocol(Component):
                              exception_to_unicode(e))
             raise ProtocolException(e)
 
+        self.log.info(f"RPC({self.RPC_ID}) JSON-WSP call by %s mirror : %s.",
+                      req.authname,
+                      repr(data.get('mirror')))
         version = data.get('version', '1.0').strip()
         if not self._check_version(version):
             raise exc.RPCVersionException(f'Unsupported version {version}',
                                           title='incompatible',
                                           proto_id=self.RPC_ID)
 
-        self.log.info(f"RPC({self.RPC_ID}) JSON-WSP mirror : %s.",
-                      repr(data.get('mirror')))
         try:
             methnm = data['methodname']
         except KeyError as e:
