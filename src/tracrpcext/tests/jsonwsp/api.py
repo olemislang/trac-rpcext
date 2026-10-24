@@ -95,23 +95,22 @@ class JsonWspApiTestCase(JsonWspTestCase):
     self.assertRegex(error['detail'], r'RPC\(jsonwsp\) reference : \d+:\d+')
 
   def test_large_file(self):
-    pagename = 'TestAmf/LargeJsonrpc'
+    pagename = 'TestJsonWsp/LargeFile'
     filename = 'large.dat'
     ws_wiki = self.admin.service('wiki')
-    rv = ws_wiki.putPage(
-      pagename, 'attachment:' + filename, {}
-    )
+    rv = ws_wiki.putPage(pagename=pagename,
+                         content='attachment:' + filename,
+                         attributes={})
     self.assertEqual(True, rv)
 
     content = bytes(bytearray(range(256))) * 4 * 1024 * 4  # 4 MB
-    rv = ws_wiki.putAttachmentEx(
-      pagename, filename, 'Large file', content
-    )
+    rv = ws_wiki.putAttachmentEx(pagename=pagename,
+                                 filename=filename,
+                                 description='Large file',
+                                 data=content)
     self.assertEqual(filename, rv)
 
-    rv = ws_wiki.getAttachment(
-      '%s/%s' % (pagename, filename)
-    )
+    rv = ws_wiki.getAttachment(path='%s/%s' % (pagename, filename))
     self.assertIsInstance(rv, bytes)
     self.assertEqual(content, rv)
 
