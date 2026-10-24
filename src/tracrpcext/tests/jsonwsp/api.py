@@ -67,7 +67,9 @@ class JsonWspApiTestCase(JsonWspTestCase):
       {'methodName': 'nonexisting', 'params': []}
     ]
     ws_sys = self.user.service('system')
-    result = ws_sys.multicall(params)
+    result = ws_sys.multicall(signatures=params)
+    self.assertFalse(result.has_fault)
+    result = result.result
     self.assertEqual(4, len(result))
     for i, r in enumerate(result[:3]):
         msg = f'Result at index {i}'
@@ -78,16 +80,19 @@ class JsonWspApiTestCase(JsonWspTestCase):
     self.assertEqual(1, result[0]['id'])
     self.assertEqual(2, result[1]['id'])
     self.assertEqual(3, result[2]['id'])
-    self.assertIn('WikiStart', result[0][0])
-    self.assertIn('Welcome', result[1][0])
+    self.assertIn('WikiStart', result[0]['result'])
+    self.assertIn('Welcome', result[1]['result'])
     self.assertEqual(['accepted', 'assigned', 'closed', 'new',
                       'reopened'
-                    ], result[2][0])
+                    ], result[2]['result'])
     self.assertIsInstance(result[3], dict)
-    self.assertEqual('Trac Error', result[3]['title'])
-    self.assertEqual('MethodNotFound', result[3]['name'])
-    self.assertRegex('RPC method "nonexisting" not found',
-                     result[3].message)
+    self.assertIn('error', result[3])
+    error = result[3]['error']
+    self.assertIsInstance(error, dict)
+    self.assertEqual('NoSuchMethodException', error['name'])
+    self.assertIn('RPC method "nonexisting" not found',
+                  error['message'])
+    self.assertRegex(error['detail'], r'RPC\(jsonwsp\) reference : \d+:\d+')
 
   def test_large_file(self):
     pagename = 'TestAmf/LargeJsonrpc'
