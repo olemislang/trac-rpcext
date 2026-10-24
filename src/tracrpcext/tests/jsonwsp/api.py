@@ -137,13 +137,12 @@ class JsonWspApiTestCase(JsonWspTestCase):
 
   def test_wrong_argspec(self):
     try:
-      ws_sys = self.admin.service('system').listMethods("hello")
-    except TypeError as e:
+      ws_sys = self.admin.service('system').listMethods(wrong_arg="hello")
+    except JsonWspFault as e:
+      self.assertEqual('client', e.args[0])
       self.assertIn(
-        'listMethods() takes exactly 2 arguments' 
-          if sys.version_info[0] == 2 else
-        'listMethods() takes 2 positional arguments but 3 were given',
-        e.args[0]
+        "ystem.listMethods() got an unexpected argument 'wrong_arg'",
+        e.args[1]
       )
     else:
       self.fail('JSON-WSP fault not raised')

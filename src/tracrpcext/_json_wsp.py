@@ -43,7 +43,8 @@ from trac.util.html import Fragment, Markup
 from trac.util.text import empty, exception_to_unicode, to_unicode
 from trac.web.api import RequestDone
 
-from tracrpc.api import IRPCProtocol, Binary, MethodNotFound, ProtocolException
+from tracrpc.api import IRPCProtocol, Binary, MethodNotFound, \
+                        ProtocolException, RPCError
 from tracrpc.json_rpc import json_load
 from tracrpc.util import cleandoc_, gettext, unicode, izip
 
