@@ -207,7 +207,7 @@ class JsonWspProtocol(Component):
                                          signature.get('methodname', ''))
                     signature.setdefault('params',
                                          signature.get('args', {}))
-                data['params'] = [params]
+                data['params'] = [params.get('signatures', [])]
             else:
                 try:
                     data['params'] = util.parse_rpc_kwargs(
@@ -244,10 +244,11 @@ class JsonWspProtocol(Component):
                 # Custom multicall
                 args = (rpcreq.get('params') or [[]])[0]
                 mcresults = [util.multicall_result(
-                    to_rpc_error(value)
+                    exc.to_rpc_error(value)
                         if isinstance(value, Exception) else
                     value[0],
                     r_id=sig.get('id') or r_id,
+                    proto_id=self.RPC_ID,
                     log=self.log,
                 ) for sig, value in izip(args, result)]
 

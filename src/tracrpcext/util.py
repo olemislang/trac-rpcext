@@ -34,6 +34,7 @@ except ImportError:
 import types
 
 from trac.util.datefmt import format_datetime
+from trac.util.text import to_unicode
 
 from tracrpc.api import XMLRPCSystem
 
@@ -41,18 +42,20 @@ from tracrpc.api import XMLRPCSystem
 # Reusable RPC helpers
 #------------------------------
 
-def multicall_result(value, r_id=None, log=None):
+def multicall_result(value, r_id=None, proto_id=None, log=None):
     if not isinstance(value, Exception):
-        return {'result': result, 'error': None, 'id': r_id}
+        return {'result': value, 'error': None, 'id': r_id}
     else:
-        return multicall_error(value, r_id=r_id, log=log)
+        return multicall_error(value, r_id=r_id,
+                               proto_id=proto_id, log=log)
 
-def multicall_error(e, c=None, r_id=None, log=None):
+def multicall_error(e, c=None, r_id=None, proto_id=None, log=None):
     # Import in local namespace to prevent circular reference
     from . import exc
 
     stack_trace = e.__class__, e, e.__traceback__
     e = exc.to_rpc_error(e)
+    e.proto_id = proto_id
     # Log error for reference included in e.details
     log.exception(e.details, exc_info=e)
     result = {'result': None,

@@ -52,7 +52,7 @@ class RpcBaseException(api._CompositeRpcError):
 
   @property
   def details(self):
-    return f"RPC({self.proto_id} reference {self.ts}"
+    return f"RPC({self.proto_id}) reference : {self.ts}"
 
 
 class RpcClientError(RpcBaseException):
