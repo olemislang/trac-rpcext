@@ -151,11 +151,12 @@ class JsonWspApiTestCase(JsonWspTestCase):
     # A Ticket resource
     try:
       ws_tckt = self.admin.service('ticket')
-      ws_tckt.get(2147483647)
+      ws_tckt.get(id=2147483647)
     except JsonWspFault as e:
-      self.assertEqual(
+      self.assertEqual('client', e.args[0])
+      self.assertIn(
         'Ticket 2147483647 does not exist.',
-        e.args[0]
+        e.args[1]
       )
     else:
       self.fail('JSON-WSP fault not raised')
@@ -163,11 +164,12 @@ class JsonWspApiTestCase(JsonWspTestCase):
     # A Wiki resource
     try:
       ws_wiki = self.admin.service('wiki')
-      ws_wiki.getPage("Test", 10)
+      ws_wiki.getPage(pagename="Test", version=10)
     except JsonWspFault as e:
-      self.assertEqual(
+      self.assertEqual('client', e.args[0])
+      self.assertIn(
         'Wiki page "Test" does not exist at version 10',
-        e.args[0]
+        e.args[1]
       )
     else:
       self.fail('JSON-WSP fault not raised')
