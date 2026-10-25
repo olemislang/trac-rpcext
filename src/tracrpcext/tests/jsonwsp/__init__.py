@@ -75,6 +75,8 @@ class JsonWspTestCase(TracRpcTestCase):
 
   def setUp(self):
     TracRpcTestCase.setUp(self)
+    self.url_anon = self._testenv.url_anon.rsplit('/', 1)[0] + '/ws/'
+    self.url_auth = self._testenv.url_auth.rsplit('/', 1)[0] + '/ws/'
 
     # Silence jsonwspclient logging
     log = logging.getLogger('jsonwspclient')
@@ -82,17 +84,14 @@ class JsonWspTestCase(TracRpcTestCase):
 
     kwargs = {'services': self.jsonwsp_services,
               'raise_for_fault': True,}
-    self.anon = TestJsonWspClient(
-        self._testenv.url_anon.rsplit('/', 1)[0] + '/ws/',
-        **kwargs
-    )
+    self.anon = TestJsonWspClient(self.url_anon, **kwargs)
     self.user = TestJsonWspClient(
-        self._testenv.url_auth.rsplit('/', 1)[0] + '/ws/',
+        self.url_auth,
         auth=HTTPBasicAuth('user', 'user'),
         **kwargs
     )
     self.admin = TestJsonWspClient(
-        self._testenv.url_auth.rsplit('/', 1)[0] + '/ws/',
+        self.url_auth,
         auth=HTTPBasicAuth('admin', 'admin'),
         **kwargs
     )

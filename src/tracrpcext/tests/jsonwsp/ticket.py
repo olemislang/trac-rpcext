@@ -43,22 +43,27 @@ class JsonWspTicketTestCase(JsonWspTestCase):
 
   def test_create_get_delete(self):
     ws_tckt = self.admin.service('ticket')
-    tid = ws_tckt.create("create_get_delete", "fooy", {})
+    resp = ws_tckt.create(summary="create_get_delete",
+                          description="fooy",
+                          attributes={})
+    tid = resp.result
 
-    _tid, time_created, time_changed, attributes = ws_tckt.get(tid)
+    resp = ws_tckt.get(id=tid)
+    _tid, time_created, time_changed, attributes = resp.result
     self.assertEqual(_tid, tid)
     self.assertEqual('fooy', attributes['description'])
     self.assertEqual('create_get_delete', attributes['summary'])
     self.assertEqual('new', attributes['status'])
     self.assertEqual('admin', attributes['reporter'])
-    ws_tckt.delete(tid)
+    ws_tckt.delete(id=tid)
     # Check that ticket no longer exists
     try:
-      ws_tckt.get(tid)
-    except RemotingError as e:
-      self.assertEqual(
+      ws_tckt.get(id=tid)
+    except JsonWspFault as e:
+      self.assertEqual('client', e.args[0])
+      self.assertIn(
         f'Ticket {tid} does not exist.',
-        e.args[0]
+        e.args[1]
       )
     else:
       self.fail('Unexpected success')
