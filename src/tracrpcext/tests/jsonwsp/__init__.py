@@ -34,6 +34,7 @@ from ..util import TracRpcProtocolTestSuite
 from jsonwspclient import JsonWspClient
 from jsonwspclient.jsonwspservice import JsonWspService
 
+from requests.auth import HTTPBasicAuth
 
 # Patches for JSON-WSP client
 
@@ -86,11 +87,13 @@ class JsonWspTestCase(TracRpcTestCase):
         **kwargs
     )
     self.user = TestJsonWspClient(
-        self._testenv.url_user.rsplit('/', 1)[0] + '/ws/',
+        self._testenv.url_auth.rsplit('/', 1)[0] + '/ws/',
+        auth=HTTPBasicAuth('user', 'user'),
         **kwargs
     )
     self.admin = TestJsonWspClient(
-        self._testenv.url_admin.rsplit('/', 1)[0] + '/ws/',
+        self._testenv.url_auth.rsplit('/', 1)[0] + '/ws/',
+        auth=HTTPBasicAuth('admin', 'admin'),
         **kwargs
     )
 
