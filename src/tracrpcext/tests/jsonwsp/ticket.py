@@ -71,10 +71,14 @@ class JsonWspTicketTestCase(JsonWspTestCase):
   def test_create_empty_summary(self):
     try:
       self.admin.service('ticket').create(
-        "", "the description", {}
+        summary="",
+        description="the description",
+        attributes={},
       )
     except JsonWspFault as e:
-      self.assertIn("Tickets must contain a summary.", unicode(e))
+      # FIXME : Should be 'client' but RPC method raises generic TracError
+      self.assertEqual('server', e.args[0])
+      self.assertIn("Tickets must contain a summary.", e.args[1])
     else:
       self.fail("Exception not raised creating ticket with empty summary")
 
