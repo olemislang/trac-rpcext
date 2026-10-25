@@ -67,9 +67,9 @@ class JsonWspApiTestCase(JsonWspTestCase):
       {'methodName': 'nonexisting', 'params': []}
     ]
     ws_sys = self.user.service('system')
-    result = ws_sys.multicall(signatures=params)
-    self.assertFalse(result.has_fault)
-    result = result.result
+    resp = ws_sys.multicall(signatures=params)
+    self.assertFalse(resp.has_fault)
+    result = resp.result
     self.assertEqual(4, len(result))
     for i, r in enumerate(result[:3]):
         msg = f'Result at index {i}'
@@ -98,21 +98,22 @@ class JsonWspApiTestCase(JsonWspTestCase):
     pagename = 'TestJsonWsp/LargeFile'
     filename = 'large.dat'
     ws_wiki = self.admin.service('wiki')
-    rv = ws_wiki.putPage(pagename=pagename,
+    resp = ws_wiki.putPage(pagename=pagename,
                          content='attachment:' + filename,
                          attributes={})
-    self.assertEqual(True, rv)
+    self.assertEqual(True, resp.result)
 
     content = bytes(bytearray(range(256))) * 4 * 1024 * 4  # 4 MB
-    rv = ws_wiki.putAttachmentEx(pagename=pagename,
+    resp = ws_wiki.putAttachmentEx(pagename=pagename,
                                  filename=filename,
                                  description='Large file',
                                  data=content)
-    self.assertEqual(filename, rv)
+    self.assertEqual(filename, resp.result)
 
-    rv = ws_wiki.getAttachment(path='%s/%s' % (pagename, filename))
-    self.assertIsInstance(rv, bytes)
-    self.assertEqual(content, rv)
+    resp = ws_wiki.getAttachment(path='%s/%s' % (pagename, filename))
+    result = resp.result
+    self.assertIsInstance(result, bytes)
+    self.assertEqual(content, result)
 
   def test_xmlrpc_permission(self):
     # Test returned response if not XML_RPC permission
