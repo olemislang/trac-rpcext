@@ -84,13 +84,17 @@ class JsonWspTicketTestCase(JsonWspTestCase):
 
   def test_getActions(self):
     ws_tckt = self.admin.service('ticket')
-    tid = ws_tckt.create(
-      "ticket_getActions", "kjsald", {'owner': ''}
+    resp = ws_tckt.create(
+      summary="ticket_getActions",
+      description="kjsald",
+      attributes={'owner': ''}
     )
+    tid = resp.result
     try:
-      actions = ws_tckt.getActions(tid)
+      resp = ws_tckt.getActions(id=tid)
+      actions = resp.result
     finally:
-      ws_tckt.delete(tid)
+      ws_tckt.delete(id=tid)
     default = [['leave', 'leave', '.', []], ['resolve', 'resolve',
                 "The resolution will be set. Next status will be 'closed'.",
                [['action_resolve_resolve_resolution', 'fixed',
