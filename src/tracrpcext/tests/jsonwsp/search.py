@@ -43,18 +43,19 @@ class JsonWspSearchTestCase(JsonWspTestCase):
 
   def test_fragment_in_search(self):
     ws_tckt = self.admin.service('ticket')
-    t1 = ws_tckt.create(
-      "ticket10786", "", {'type': 'enhancement', 'owner': 'A'}
-    )
+    t1 = ws_tckt.create(summary="ticket10786",
+                        description="",
+                        attributes={'type': 'enhancement', 'owner': 'A'})
 
     try:
       ws_srch = self.user.service('search')
-      results = ws_srch.performSearch("ticket10786")
+      resp = ws_srch.performSearch(query="ticket10786")
+      results = resp.result
       self.assertEqual(1, len(results))
       self.assertEqual('<span class="new">#%d</span>: enhancement: '
                         'ticket10786 (new)' % t1, results[0][1])
     finally:
-      self.assertEqual(0, rpc_tckt.delete(t1))
+      self.assertEqual(0, rpc_tckt.delete(id=t1))
 
   def test_search_none_result(self):
     # Some plugins may return None instead of empty iterator
@@ -74,9 +75,10 @@ class NoneSearch(Component):
 """
     with self._plugin(source, 'NoneSearchPlugin.py'):
       ws_srch = self.user.service('search')
-      results = ws_srch.performSearch(
-        "nothing_should_be_found"
+      resp = ws_srch.performSearch(
+        query="nothing_should_be_found"
       )
+      results = resp.result
       self.assertEqual([], results)
 
 
