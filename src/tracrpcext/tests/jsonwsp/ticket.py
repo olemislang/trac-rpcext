@@ -140,26 +140,27 @@ class JsonWspTicketTestCase(JsonWspTestCase):
     # Based on http://trac-hacks.org/ticket/5387
     env = self._testenv.get_trac_environment()
     ws_tckt = self.admin.service('ticket')
-    tid = ws_tckt.create('abc', 'def', {})
+    resp = ws_tckt.create(summary='abc',
+                          description='def',
+                          attributes={})
+    tid = resp.result
     try:
-      self.assertNotIn(
-        'delete',
-        ws_tckt.getAvailableActions(tid)
-      )
+      resp = ws_tckt.getAvailableActions(id=tid)
+      self.assertNotIn( 'delete', resp.result)
       env.config.set('ticket', 'workflow',
         'ConfigurableTicketWorkflow,DeleteTicketActionController'
       )
       env.config.save()
       with self._plugin(self._delete_ticket_action_controller,
                         'DeleteTicket.py'):
-        self.assertIn(
-          'delete',
-          ws_tckt.getAvailableActions(tid)
-        )
+        resp = ws_tckt.getAvailableActions(id=tid)
+        actions = resp.result
+        self.assertIn('delete', actions)
     finally:
       env.config.set('ticket', 'workflow', 'ConfigurableTicketWorkflow')
       env.config.save()
-      self.assertEqual(0, ws_tckt.delete(tid))
+      resp = ws_tckt.delete(id=tid)
+      self.assertEqual(0, resp.result)
 
   def test_FineGrainedSecurity(self):
     ws_admin = self.admin.service('ticket')
