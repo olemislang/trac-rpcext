@@ -166,17 +166,28 @@ class JsonWspTicketTestCase(JsonWspTestCase):
     ws_admin = self.admin.service('ticket')
     ws_user = self.user.service('ticket')
     ws_anon = self.anon.service('ticket')
-    tid1 = ws_admin.create('abc', '123', {})
-    tid2 = ws_admin.create('def', '456', {})
+    resp = ws_admin.create(summary='abc',
+                           description='123',
+                           attributes={})
+    tid1 = resp.result
+    resp = ws_admin.create(summary='def',
+                           description='456',
+                           attributes={})
+    tid2 = resp.result
     self.assertEqual(tid2, tid1 + 1)
     # First some non-restricted tests for comparison:
     self.assertRaises(
-      RemotingError, ws_anon.create, 'abc', 'def'
+      JsonWspFault, ws_anon.create,
+      summary='abc', description='def'
     )
-    self.assertEqual([tid1, tid2], ws_user.query())
-    self.assertTrue(ws_user.get(tid2))
-    self.assertTrue(ws_user.update(tid1, "ok"))
-    self.assertTrue(ws_user.update(tid2, "ok"))
+    resp = ws_user.query()
+    self.assertEqual([tid1, tid2], resp.result)
+    resp = ws_user.get(id=tid2)
+    self.assertTrue(resp.result)
+    resp = ws_user.update(id=tid1, comment="ok")
+    self.assertTrue(resp.result)
+    resp = ws_user.update(id=tid2, comment="ok")
+    self.assertTrue(resp.result)
     # Enable security policy and test
     source = rf"""# -*- coding: utf-8 -*-
 from trac.core import Component, implements
@@ -197,25 +208,35 @@ class TicketPolicy(Component):
     try:
       with self._plugin(source, 'TicketPolicy.py'):
         self._testenv.restart()
-        self.assertEqual([tid1], ws_user.query())
-        self.assertTrue(ws_user.get(tid1))
-        self.assertRaises(RemotingError, ws_user.get, tid2)
-        self.assertTrue(ws_user.update(tid1, "ok"))
+        resp = ws_user.query()
+        self.assertEqual([tid1], resp.result)
+        resp = ws_user.get(id=tid1)
+        self.assertTrue(resp.result)
+        self.assertRaises(JsonWspFault, ws_user.get, id=tid2)
+        resp = ws_user.update(id=tid1, comment="ok")
+        self.assertTrue(resp.result)
         self.assertRaises(
-          RemotingError, ws_user.update,
-          tid2, "not ok"
+          JsonWspFault, ws_user.update,
+          id=tid2, comment="not ok"
         )
-        tid3 = ws_anon.create('efg', '789', {})
+        resp = ws_anon.create(summary='efg',
+                              description='789',
+                              attributes={})
+        tid3 = resp.result
         self.assertEqual(tid3, tid2 + 1)
     finally:
       # Clean, reset and simple verification
       env.config.set('trac', 'permission_policies', _old_conf)
       env.config.save()
 
-    self.assertEqual([tid1, tid2, tid3], ws_user.query())
-    self.assertEqual(0, ws_admin.delete(tid1))
-    self.assertEqual(0, ws_admin.delete(tid2))
-    self.assertEqual(0, ws_admin.delete(tid3))
+    resp = ws_user.query()
+    self.assertEqual([tid1, tid2, tid3], resp.result)
+    resp = ws_admin.delete(id=tid1)
+    self.assertEqual(0, resp.result)
+    resp = ws_admin.delete(id=tid2)
+    self.assertEqual(0, resp.result)
+    resp = ws_admin.delete(id=tid3)
+    self.assertEqual(0, resp.result)
 
 
 def test_suite():
