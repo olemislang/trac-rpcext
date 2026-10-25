@@ -86,9 +86,10 @@ class IWebServiceProtocol(IRPCProtocol):
         lang_id:        Description language ID (as registered in `ws_init`).
         """
 
-    def encode_ws_idl(description, lang_id, writer):
+    def encode_ws_idl(req, description, lang_id, writer):
         """Serialize service description into IDL syntax selected by ID
 
+        req             request object
         description:    WebServiceSystem description of the service;
         lang_id:        Description language ID (as registered in `ws_init`);
         writer:         Stream writer.

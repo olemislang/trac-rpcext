@@ -307,7 +307,7 @@ class JsonWspProtocol(Component):
         if lang_id == 'jsonwsp':
             req.send_header('Content-Type', f'{self.WS_CONTENT_TYPE} charset=utf-8')
 
-    def encode_ws_idl(self, description, lang_id, writer):
+    def encode_ws_idl(self, req, description, lang_id, writer):
         """Encode service meta-data in JSON-WSP description language.
         """
         service_name = description['name']
@@ -324,14 +324,20 @@ class JsonWspProtocol(Component):
                            'detail': 'string',},
         })
 
+        url_call = self.url(controller='jsonwsp',
+                            service=service_name,
+                            action='call',
+                            content_type=self.WS_CONTENT_TYPE,)
+        r = req.args.get('ws.route')
+        # FIXME : Multiple URL rematch variables
+        # FIXME : Generate from routes
+        if r and r.get('auth'):
+            url_call = '/login' + url_call
         desc_obj = {
             "type": "jsonwsp/description",
             "version": "1.0",
             "servicename": service_name,
-            "url": self.env.abs_href(self.url(controller='jsonwsp',
-                                              service=service_name,
-                                              action='call',
-                                              content_type=self.WS_CONTENT_TYPE,)),
+            "url": self.env.abs_href(url_call),
             "types": typedefs,
             'methods': {
                 methnm: {

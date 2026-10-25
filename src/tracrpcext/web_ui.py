@@ -49,7 +49,7 @@ class WebServicesModule(Component):
         self.controllers = {'sys': self,}
         # Repeat match for login prefix
         self.mapper.connect('login', r'/login/{path_info:.*}',
-                            controller='sys', action='match')
+                            controller='sys', action='match', auth=True)
 
     # IEnvironmentSetupParticipant methods
 
@@ -86,6 +86,7 @@ class WebServicesModule(Component):
         r = self._match_route(req)
         if r is None:
             return False
+        self.log.debug('WS request path %r' % req.path_info)
         req.args['ws.route'] = r
         return True
 
@@ -97,6 +98,9 @@ class WebServicesModule(Component):
         protocol = self.controllers.get(ctlid)
         try:
             proto_id = None
+            self.log.debug('WS routes match %r', r)
+            if r.get('auth') and req.authname == 'anonymous':
+                raise exc.RequireHeaderException("Authentication information not available")
             if protocol is not None:
                 try:
                     # Try getting short protocol ID
@@ -115,6 +119,8 @@ class WebServicesModule(Component):
                     ), title='', proto_id=proto_id
                 )
             if action == 'call':
+                self.log.info(f'WS({proto_id}) Call to {service_name} '
+                              f'method by {req.authname}')
                 newreq = self._rewrite_ws_call(req, protocol, service_name)
                 try:
                     RPCWeb(self.env).process_request(newreq)
@@ -131,7 +137,7 @@ class WebServicesModule(Component):
                 wsys = ws.WebServiceSystem(self.env)
                 desc = wsys.generate_service_desc(service_name)
                 with BytesIO() as stream:
-                    protocol.encode_ws_idl(desc, lang_id, stream)
+                    protocol.encode_ws_idl(req, desc, lang_id, stream)
                     # Determine content length
                     clen = stream.seek(0, 2)
                     # Rewind back to the beginning
