@@ -36,7 +36,7 @@ from tracrpc.tests.wiki import RpcWikiTestCase
 from ..util import TracRpcProtocolTestSuite
 from . import JsonWspTestCase
 
-from jsonwspclient,jsonwspexceptions import JsonWspFault
+from jsonwspclient.jsonwspexceptions import JsonWspFault
 
 class JsonWspWikiTestCase(JsonWspTestCase):
   jsonwsp_services = ('wiki',)
@@ -46,43 +46,52 @@ class JsonWspWikiTestCase(JsonWspTestCase):
     # Create attachment
     ws_wiki = self.admin.service('wiki')
 
-    ws_wiki.putPage('TestJsonWsp/Attachments', 'content', {})
+    ws_wiki.putPage(pagename='TestJsonWsp/Attachments',
+                    content='content',
+                    attributes={})
     ws_wiki.putAttachmentEx(
-      'TestJsonWsp/Attachments', 'feed2.png', 'test image',
-      self.image_in
+      pagename='TestJsonWsp/Attachments',
+      filename='feed2.png',
+      description='test image',
+      data=self.image_in,
     )
-    rv = ws_wiki.getAttachment(f'TestJsonWsp/Attachments/feed2.png')
+    resp = ws_wiki.getAttachment(
+        path=f'TestJsonWsp/Attachments/feed2.png'
+    )
+    rv = resp.result
     self.assertEqual(
       self.image_in,
-      rv.getvalue()
+      rv
     )
 
     # Update attachment (adding new)
     ws_wiki.putAttachmentEx(
-      'TestJsonWsp/Attachments', 'feed2.png', 'test image',
-      self.image_in, False
+      pagename='TestJsonWsp/Attachments',
+      filename='feed2.png', 
+      description='test image',
+      data=self.image_in,
+      replace=False,
     )
-    rv = ws_wiki.getAttachment(f'TestJsonWsp/Attachments/feed2.2.png')
+    resp = ws_wiki.getAttachment(path=f'TestJsonWsp/Attachments/feed2.2.png')
+    rv = resp.result
     self.assertEqual(
       self.image_in,
-      rv.getvalue()
+      rv
     )
 
     # List attachments
+    resp = ws_wiki.listAttachments(pagename='TestJsonWsp/Attachments')
     self.assertEqual(
       [f'TestJsonWsp/Attachments/feed2.2.png',
        f'TestJsonWsp/Attachments/feed2.png'],
-      sorted(
-        ws_wiki.listAttachments('TestJsonWsp/Attachments')
-    ))
-    # Delete both attachments
-    ws_wiki.deleteAttachment(f'TestJsonWsp/Attachments/feed2.png')
-    ws_wiki.deleteAttachment(f'TestJsonWsp/Attachments/feed2.2.png')
-    # List attachments again
-    self.assertEqual(
-      [],
-      ws_wiki.listAttachments('TestJsonWsp/Attachments')
+      sorted(resp.result)
     )
+    # Delete both attachments
+    ws_wiki.deleteAttachment(path=f'TestJsonWsp/Attachments/feed2.png')
+    ws_wiki.deleteAttachment(path=f'TestJsonWsp/Attachments/feed2.2.png')
+    # List attachments again
+    resp = ws_wiki.listAttachments('TestJsonWsp/Attachments')
+    self.assertEqual([], resp.result)
 
   def test_getRecentChanges(self):
     ws_wiki = self.admin.service('wiki')
